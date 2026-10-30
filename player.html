@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Music Room Player</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:#101827; color:#edf3fb; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:linear-gradient(145deg,#0d1728,#172b43); }
+    header { padding:20px 5vw; border-bottom:1px solid #31445c; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    h1 { margin:0; font-size:clamp(21px,3vw,30px); }
+    main { width:min(980px,92vw); margin:28px auto 50px; }
+    .panel { background:#1b2a3d; border:1px solid #344b66; border-radius:16px; padding:20px; margin-bottom:18px; box-shadow:0 12px 30px #0003; }
+    label { display:block; font-size:14px; color:#bdcce0; margin-bottom:8px; }
+    input { width:100%; padding:13px 14px; border:1px solid #526a87; border-radius:9px; background:#101d2e; color:white; font-size:16px; margin:7px 0 12px; }
+    button { border:0; border-radius:9px; padding:11px 16px; cursor:pointer; font-weight:650; font-size:15px; color:#102036; background:#9dc8ff; }
+    button:hover { filter:brightness(1.08); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .secondary { background:#3a526f; color:#edf3fb; }
+    .danger { background:#b94b55; color:white; }
+    .muted { color:#a8b8cc; font-size:13px; }
+    .status { color:#c6dcf6; padding:9px 0 0; min-height:32px; }
+    .player-wrap { background:#05090f; border-radius:12px; overflow:hidden; aspect-ratio:16/9; width:100%; }
+    #yt-player { width:100%; height:100%; }
+    .song-title { font-size:20px; font-weight:700; margin:14px 0 5px; overflow-wrap:anywhere; }
+    .song-sub { color:#b6c8dd; font-size:14px; }
+    .controls { display:flex; flex-wrap:wrap; gap:9px; margin-top:16px; }
+    .progress-row { display:flex; align-items:center; gap:12px; margin-top:14px; }
+    progress { flex:1; height:9px; accent-color:#9dc8ff; }
+    .pill { display:inline-block; padding:5px 10px; border-radius:99px; background:#2b405b; color:#c8daf0; font-size:12px; }
+    .warning { color:#ffdb9b; }
+    @media (max-width:600px) { header { align-items:flex-start; flex-direction:column; } .panel { padding:15px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>♫ Music Room — Player</h1>
+    <span id="connection" class="pill">ยังไม่ได้เชื่อมต่อ</span>
+  </header>
+  <main>
+    <section class="panel" id="connect-panel">
+      <h2>เชื่อมต่อเครื่องเล่นหลัก</h2>
+      <p class="muted">ใช้เฉพาะอุปกรณ์ที่ต่อกับลำโพงของห้องเพลง และเปิดหน้านี้ค้างไว้ขณะใช้งาน</p>
+      <label for="player-code">รหัสควบคุม Player</label>
+      <input id="player-code" type="password" autocomplete="current-password" placeholder="กรอกรหัสที่ผู้ดูแลกำหนด">
+      <button id="connect-btn">เชื่อมต่อเครื่องเล่น</button>
+      <p id="connect-status" class="status" role="status"></p>
+    </section>
+
+    <section class="panel" id="play-panel" hidden>
+      <div class="player-wrap"><div id="yt-player"></div></div>
+      <div class="song-title" id="song-title">กำลังตรวจสอบคิวเพลง…</div>
+      <div class="song-sub" id="song-sub">—</div>
+      <div class="progress-row">
+        <span id="elapsed">0:00</span>
+        <progress id="progress" value="0" max="100"></progress>
+        <span id="duration">0:00</span>
+      </div>
+      <div class="controls">
+        <button id="play-btn" disabled>เริ่มเล่นเพลง</button>
+        <button id="pause-btn" class="secondary" disabled>พักเพลง</button>
+        <button id="skip-btn" class="secondary" disabled>ข้ามเพลง</button>
+        <button id="refresh-btn" class="secondary">ตรวจคิวอีกครั้ง</button>
+        <button id="release-btn" class="danger">ปลดการควบคุม</button>
+      </div>
+      <p id="player-status" class="status" role="status"></p>
+      <p class="muted">หมายเหตุ: เมื่อเชื่อมต่อเครื่องเล่นแล้ว หากเพลงไม่เริ่ม ให้กด “เริ่มเล่นเพลง” หรือปุ่มเล่นบน YouTube Player หนึ่งครั้ง</p>
+    </section>
+
+    <section class="panel">
+      <strong>สถานะห้องเพลง</strong>
+      <p class="muted">Player ใช้การเช่าควบคุม (Lease) ครั้งละ 60 วินาที และต่ออายุทุก 15 วินาที เพื่อป้องกันการเปิดเครื่องเล่นหลายเครื่องพร้อมกัน</p>
+      <p id="public-status" class="status">กำลังอ่านสถานะ…</p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
+
+    const $ = (id) => document.getElementById(id);
+    const DEVICE_KEY = "ymq_player_device_id";
+    const getDeviceId = () => {
+      let value = localStorage.getItem(DEVICE_KEY);
+      if (!value) {
+        value = crypto.randomUUID();
+        localStorage.setItem(DEVICE_KEY, value);
+      }
+      return value;
+    };
+
+    const deviceId = getDeviceId();
+    let leaseToken = "";
+    let player = null;
+    let playerReady = false;
+    let prepared = null;
+    let currentSong = null;
+    let advancing = false;
+    let connected = false;
+    let heartbeatTimer = null;
+    let progressTimer = null;
+    let idlePollTimer = null;
+
+    const setConnection = (message) => { $("connection").textContent = message; };
+    const showStatus = (message) => { $("player-status").textContent = message || ""; };
+    const fmt = (seconds) => {
+      const n = Math.max(0, Math.floor(Number(seconds) || 0));
+      return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`;
+    };
+
+    async function api(action, data = {}) {
+      if (!SUPABASE_URL.startsWith("https://") || !SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_")) {
+        throw new Error("กรุณาตรวจสอบ assets/config.js");
+      }
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ action, ...data }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      return result;
+    }
+
+    function loadYouTubeAPI() {
+      return new Promise((resolve, reject) => {
+        if (window.YT && window.YT.Player) return resolve();
+        const previous = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+          if (typeof previous === "function") previous();
+          resolve();
+        };
+        const script = document.createElement("script");
+        script.src = "https://www.youtube.com/iframe_api";
+        script.onerror = () => reject(new Error("โหลด YouTube Player API ไม่สำเร็จ"));
+        document.head.append(script);
+      });
+    }
+
+    function initYouTubePlayer() {
+      return new Promise((resolve) => {
+        player = new YT.Player("yt-player", {
+          width: "100%",
+          height: "100%",
+          playerVars: { autoplay: 0, controls: 1, playsinline: 1, rel: 0, enablejsapi: 1 },
+          events: {
+            onReady: async (event) => {
+              playerReady = true;
+              resolve(event.target);
+              await prepareNext(false);
+            },
+            onStateChange: handlePlayerState,
+            onError: () => {
+              showStatus("YouTube ไม่สามารถเล่นวิดีโอนี้ได้ กำลังข้ามไปเพลงถัดไป…");
+              finishAndContinue("ERROR", true);
+            },
+            onAutoplayBlocked: () => {
+              showStatus("เบราว์เซอร์บล็อกการเล่นอัตโนมัติ กรุณากดปุ่มเริ่มเล่นเพลง");
+              $("play-btn").disabled = false;
+            },
+          },
+        });
+      });
+    }
+
+    async function connectPlayer() {
+      const button = $("connect-btn");
+      button.disabled = true;
+      $("connect-status").textContent = "กำลังตรวจสอบรหัสและเชื่อมต่อ…";
+      try {
+        const playerCode = $("player-code").value;
+        const result = await api("playerAcquire", { player_code: playerCode, device_id: deviceId });
+        leaseToken = result.lease_token;
+        connected = true;
+        setConnection("เชื่อมต่อแล้ว • Lease 60 วินาที");
+        $("connect-panel").hidden = true;
+        $("play-panel").hidden = false;
+        showStatus("เชื่อมต่อสำเร็จ กำลังเตรียมเพลงตามลำดับคะแนนโหวต…");
+        await loadYouTubeAPI();
+        await initYouTubePlayer();
+        startTimers();
+      } catch (error) {
+        $("connect-status").textContent = error.message;
+        button.disabled = false;
+      }
+    }
+
+    async function prepareNext(autoplay = false) {
+      if (!connected || !leaseToken || !playerReady) return;
+      try {
+        const result = await api("playerClaimNext", { device_id: deviceId, lease_token: leaseToken });
+        prepared = result.result;
+        const song = prepared?.song;
+        if (!song) {
+          currentSong = null;
+          $("song-title").textContent = "ยังไม่มีเพลงในคิว";
+          $("song-sub").textContent = "เพิ่มเพลงจากหน้าหลัก แล้วกดตรวจคิวอีกครั้ง";
+          $("play-btn").textContent = "ตรวจคิวอีกครั้ง";
+          $("play-btn").disabled = false;
+          $("pause-btn").disabled = true;
+          $("skip-btn").disabled = true;
+          showStatus("เครื่องเล่นพร้อมใช้งานและกำลังรอเพลงใหม่");
+          return;
+        }
+
+        currentSong = song;
+        $("song-title").textContent = song.title || "เพลงที่กำลังเล่น";
+        $("song-sub").textContent = `ผู้ส่ง: ${song.submitted_by || "-"}${song.recipient ? ` • ฝากถึง: ${song.recipient}` : ""}${song.message ? ` • ${song.message}` : ""}`;
+        $("play-btn").textContent = prepared.status === "PAUSED" ? "เล่นต่อ" : (prepared.recovered ? "เล่นเพลงต่อจากเดิม" : "เริ่มเล่นเพลง");
+        $("play-btn").disabled = false;
+        $("pause-btn").disabled = false;
+        $("skip-btn").disabled = false;
+        showStatus(prepared.recovered ? `กู้คืนเพลงเดิมจากตำแหน่ง ${fmt(prepared.position)} แล้ว` : "เพลงถัดไปพร้อมเล่น");
+
+        if (autoplay) loadPreparedSong();
+      } catch (error) {
+        showStatus(error.message);
+        if (error.message.includes("Lease หมดอายุ") || error.message.includes("PLAYER_LEASE_EXPIRED")) {
+          connected = false;
+          setConnection("การเชื่อมต่อหมดอายุ");
+        }
+      }
+    }
+
+    function loadPreparedSong() {
+      if (!playerReady || !prepared?.song) {
+        if (!currentSong) prepareNext(false);
+        else player?.playVideo();
+        return;
+      }
+      const song = prepared.song;
+      const startSeconds = Math.max(0, Number(prepared.position) || 0);
+      prepared = null;
+      currentSong = song;
+      player.loadVideoById({ videoId: song.video_id, startSeconds });
+      showStatus("กำลังส่งเพลงไปยัง YouTube Player…");
+      $("play-btn").disabled = true;
+    }
+
+    async function handlePlayerState(event) {
+      if (!currentSong || !connected) return;
+      if (event.data === YT.PlayerState.PLAYING) {
+        showStatus("กำลังเล่นเพลง");
+        $("play-btn").disabled = true;
+        $("pause-btn").disabled = false;
+        $("skip-btn").disabled = false;
+        heartbeat("PLAYING");
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        showStatus("หยุดพักเพลงชั่วคราว");
+        $("play-btn").textContent = "เล่นต่อ";
+        $("play-btn").disabled = false;
+        heartbeat("PAUSED");
+      } else if (event.data === YT.PlayerState.ENDED) {
+        await finishAndContinue("ENDED", true);
+      }
+    }
+
+    async function finishAndContinue(reason, autoplay) {
+      if (advancing || !currentSong || !connected) return;
+      advancing = true;
+      const finishedId = currentSong.id;
+      try {
+        const result = await api("playerFinish", {
+          device_id: deviceId,
+          lease_token: leaseToken,
+          song_id: finishedId,
+          end_reason: reason,
+        });
+        if (result.completed) {
+          currentSong = null;
+          prepared = null;
+          await prepareNext(autoplay);
+        } else {
+          // A stale end event must not finish or replace a different current song.
+          currentSong = null;
+          prepared = null;
+          await prepareNext(false);
+          showStatus("สถานะเพลงมีการเปลี่ยนแปลง จึงโหลดสถานะล่าสุดแทน");
+        }
+      } catch (error) {
+        showStatus(error.message);
+      } finally {
+        advancing = false;
+      }
+    }
+
+    function heartbeat(status) {
+      if (!connected || !leaseToken) return;
+      const position = playerReady && currentSong ? Math.floor(player.getCurrentTime() || 0) : 0;
+      api("playerHeartbeat", {
+        device_id: deviceId,
+        lease_token: leaseToken,
+        player_status: status || (currentSong ? "PLAYING" : "IDLE"),
+        position,
+      }).catch((error) => {
+        showStatus(error.message);
+        if (error.message.includes("Lease หมดอายุ")) {
+          connected = false;
+          setConnection("การเชื่อมต่อหมดอายุ");
+        }
+      });
+    }
+
+    function startTimers() {
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (progressTimer) clearInterval(progressTimer);
+      if (idlePollTimer) clearInterval(idlePollTimer);
+      heartbeatTimer = setInterval(() => {
+        const state = playerReady && player.getPlayerState() === YT.PlayerState.PAUSED ? "PAUSED" : (currentSong ? "PLAYING" : "IDLE");
+        heartbeat(state);
+      }, 15000);
+      progressTimer = setInterval(() => {
+        if (!playerReady || !currentSong) return;
+        const current = player.getCurrentTime() || 0;
+        const total = player.getDuration() || currentSong.duration_seconds || 0;
+        $("elapsed").textContent = fmt(current);
+        $("duration").textContent = fmt(total);
+        $("progress").max = Math.max(total, 1);
+        $("progress").value = Math.min(current, total || current);
+      }, 1000);
+      idlePollTimer = setInterval(() => {
+        if (connected && !currentSong && !prepared && !advancing) prepareNext(false);
+      }, 15000);
+    }
+
+    $("connect-btn").addEventListener("click", connectPlayer);
+    $("play-btn").addEventListener("click", () => {
+      if (prepared?.song) loadPreparedSong();
+      else if (currentSong && playerReady) player.playVideo();
+      else prepareNext(false);
+    });
+    $("pause-btn").addEventListener("click", () => {
+      if (playerReady && currentSong) {
+        player.pauseVideo();
+        heartbeat("PAUSED");
+      }
+    });
+    $("skip-btn").addEventListener("click", () => finishAndContinue("SKIPPED", true));
+    $("refresh-btn").addEventListener("click", () => { if (!currentSong && !prepared) prepareNext(false); });
+    $("release-btn").addEventListener("click", async () => {
+      if (!connected || !leaseToken) return;
+      try {
+        if (playerReady && currentSong) {
+          player.pauseVideo();
+          await api("playerHeartbeat", {
+            device_id: deviceId, lease_token: leaseToken,
+            player_status: "PAUSED", position: Math.floor(player.getCurrentTime() || 0),
+          });
+        }
+        await api("playerRelease", { device_id: deviceId, lease_token: leaseToken });
+      } catch (_) { /* The lease will expire automatically if the release request cannot reach the server. */ }
+      connected = false;
+      leaseToken = "";
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (progressTimer) clearInterval(progressTimer);
+      if (idlePollTimer) clearInterval(idlePollTimer);
+      setConnection("ปลดการควบคุมแล้ว");
+      $("play-panel").hidden = true;
+      $("connect-panel").hidden = false;
+      $("connect-btn").disabled = false;
+      $("connect-status").textContent = "ปลดการควบคุมแล้ว สามารถเชื่อมต่อใหม่ได้";
+    });
+
+    async function loadPublicStatus() {
+      try {
+        const result = await api("getPlayerState");
+        const songText = result.song ? `เพลงปัจจุบัน: ${result.song.title}` : "ยังไม่มีเพลงกำลังเล่น";
+        $("public-status").textContent = `${songText} • สถานะ ${result.state.status} • อัปเดต ${new Date(result.state.updated_at).toLocaleTimeString("th-TH")}`;
+      } catch (error) {
+        $("public-status").textContent = error.message;
+      }
+    }
+    loadPublicStatus();
+    setInterval(loadPublicStatus, 15000);
+  </script>
+</body>
+</html>
