@@ -1,4 +1,0 @@
-project_id = "youtube-music-queue"
-
-[functions.health]
-verify_jwt = false
