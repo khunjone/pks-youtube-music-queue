@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Music Room — Admin</title>
+  <style>
+    :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 16px;font-size:19px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input[type=email],.field input[type=password],.field input[type=number]{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:center;padding:11px;background:#f7f9fc;border-radius:8px;font-size:14px}.check input{width:17px;height:17px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white}button.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.list{display:grid;gap:9px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e6ebf2;border-radius:10px}.item-main{min-width:0;flex:1}.item-title{font-weight:650;overflow-wrap:anywhere}.item-meta{font-size:12px;color:#718198;margin-top:3px;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#eaf1f9;color:#315a84;font-size:11px;margin-right:5px}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.scroll{max-height:430px;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:9px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.hidden{display:none!important}.error{color:#b42332}.success{color:#157347}.login{max-width:440px;margin:8vh auto}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small-btn{padding:7px 10px;font-size:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
+    @media(max-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.checks{grid-template-columns:1fr}.panel{padding:15px}.item{align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>♫ Music Room — Admin</h1>
+    <div class="actions" style="margin:0">
+      <span id="role-label" class="muted" style="color:#d1ddec"></span>
+      <button id="refresh-btn" class="secondary hidden">รีเฟรชข้อมูล</button>
+      <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
+    </div>
+  </header>
+  <main>
+    <section id="login-panel" class="panel login">
+      <h2>เข้าสู่ระบบผู้ดูแล</h2>
+      <p class="muted">ใช้บัญชีที่สร้างไว้ใน Supabase Authentication และได้รับสิทธิ์ใน admin_profiles แล้วเท่านั้น</p>
+      <form id="login-form">
+        <label class="field">อีเมล<input id="email" type="email" autocomplete="username" required></label>
+        <label class="field">รหัสผ่าน<input id="password" type="password" autocomplete="current-password" required></label>
+        <button id="login-btn" type="submit" style="width:100%">เข้าสู่ระบบ</button>
+      </form>
+      <p id="login-status" class="status" role="status"></p>
+    </section>
+
+    <section id="admin-panel" class="hidden">
+      <section class="panel">
+        <div class="section-head"><h2>ภาพรวม</h2><span id="player-state" class="tag">กำลังอ่านสถานะ Player…</span></div>
+        <div class="grid" id="stats-grid">
+          <div class="stat"><span>เพลงรอเล่น</span><strong id="stat-waiting">—</strong></div>
+          <div class="stat"><span>กำลังเล่น</span><strong id="stat-playing">—</strong></div>
+          <div class="stat"><span>เล่นแล้ว</span><strong id="stat-played">—</strong></div>
+          <div class="stat"><span>Session ที่ยังใช้งาน</span><strong id="stat-sessions">—</strong></div>
+          <div class="stat"><span>เพิ่มเพลงวันนี้</span><strong id="stat-today">—</strong></div>
+          <div class="stat"><span>ข้ามเพลง</span><strong id="stat-skipped">—</strong></div>
+          <div class="stat"><span>นำออกจากคิว</span><strong id="stat-removed">—</strong></div>
+          <div class="stat"><span>เล่นไม่สำเร็จ</span><strong id="stat-errors">—</strong></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>ตั้งค่ารหัสผ่านผู้ดูแล</h2>
+        <form id="password-form" class="two">
+          <label class="field">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)<input id="new-password" type="password" minlength="8" autocomplete="new-password" required></label>
+          <label class="field">ยืนยันรหัสผ่านใหม่<input id="confirm-password" type="password" minlength="8" autocomplete="new-password" required></label>
+          <div><button type="submit" id="password-btn">บันทึกรหัสผ่าน</button><p id="password-status" class="status" role="status"></p></div>
+        </form>
+      </section>
+
+      <section class="panel" id="settings-panel">
+        <h2>ตั้งค่าห้องเพลง</h2>
+        <form id="settings-form">
+          <div class="two">
+            <label class="field">จำนวนเพลงรอเล่นสูงสุด (5–500)<input id="max-queue" type="number" min="5" max="500" required></label>
+            <label class="field">จำนวนเพลงต่อ Session (1–20)<input id="max-per-user" type="number" min="1" max="20" required></label>
+          </div>
+          <div class="checks">
+            <label class="check"><input id="accept-requests" type="checkbox"> เปิดรับคำขอเพลง</label>
+            <label class="check"><input id="vote-enabled" type="checkbox"> เปิดให้โหวตเพลง</label>
+            <label class="check"><input id="allow-unvote" type="checkbox"> อนุญาตให้ยกเลิกโหวต</label>
+          </div>
+          <div class="actions"><button type="submit" id="save-settings">บันทึกการตั้งค่า</button></div>
+        </form>
+        <p class="muted">การปิดรับคำขอจะป้องกันทั้ง Session ใหม่และการเพิ่มเพลงจาก Session เดิม ส่วนการปิดโหวตจะป้องกันการโหวตและการยกเลิกโหวต</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-head"><h2>จัดการคิวเพลง</h2><button id="clear-queue" class="danger small-btn">นำเพลงรอทั้งหมดออก</button></div>
+        <div id="queue-list" class="list"><div class="empty">กำลังโหลดคิว…</div></div>
+      </section>
+
+      <div class="two">
+        <section class="panel" id="sessions-panel">
+          <h2>Session ผู้ใช้งานล่าสุด</h2>
+          <div id="sessions-list" class="list scroll"><div class="empty">กำลังโหลด…</div></div>
+        </section>
+        <section class="panel">
+          <h2>ประวัติการเล่นล่าสุด</h2>
+          <div id="history-list" class="list scroll"><div class="empty">กำลังโหลด…</div></div>
+        </section>
+      </div>
+      <section class="panel" id="logs-panel">
+        <h2>บันทึกการจัดการระบบ</h2>
+        <div id="logs-list" class="list scroll"><div class="empty">กำลังโหลด…</div></div>
+      </section>
+      <p id="admin-status" class="status" role="status"></p>
+    </section>
+    <p class="footer">YouTube Music Queue Manager • Admin Console</p>
+  </main>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
+
+    const $ = (id) => document.getElementById(id);
+    const ready = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
+    const client = ready ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
+    let currentRole = "";
+
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const dateText = (value) => value ? new Date(value).toLocaleString("th-TH", { dateStyle:"medium", timeStyle:"short" }) : "—";
+    const say = (message, ok = false) => { $("admin-status").textContent = message || ""; $("admin-status").className = `status ${ok ? "success" : ""}`; };
+
+    async function api(action, data = {}) {
+      const { data: { session } } = await client.auth.getSession();
+      if (!session?.access_token) throw new Error("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action, ...data }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      return result;
+    }
+
+    function showAdmin(role) {
+      currentRole = role;
+      $("login-panel").classList.add("hidden");
+      $("admin-panel").classList.remove("hidden");
+      $("logout-btn").classList.remove("hidden");
+      $("refresh-btn").classList.remove("hidden");
+      $("role-label").textContent = role === "ADMIN" ? "สิทธิ์ ADMIN" : "สิทธิ์ MODERATOR";
+      for (const id of ["settings-panel", "sessions-panel", "logs-panel"]) {
+        $(id).classList.toggle("hidden", role !== "ADMIN");
+      }
+    }
+
+    async function loadAll() {
+      say("กำลังโหลดข้อมูลผู้ดูแล…");
+      try {
+        const [overview, queue, history] = await Promise.all([
+          api("adminOverview"), api("adminGetQueue"), api("adminGetHistory"),
+        ]);
+        showAdmin(overview.role);
+        const s = overview.stats;
+        $("stat-waiting").textContent = s.waiting;
+        $("stat-playing").textContent = s.playing;
+        $("stat-played").textContent = s.played;
+        $("stat-sessions").textContent = s.active_sessions;
+        $("stat-today").textContent = s.today;
+        $("stat-skipped").textContent = s.skipped;
+        $("stat-removed").textContent = s.removed;
+        $("stat-errors").textContent = s.errors;
+        $("player-state").textContent = `Player: ${overview.player?.status || "ไม่ทราบสถานะ"}`;
+        renderSettings(overview.settings || {});
+        renderQueue(queue.songs || []);
+        renderHistory(history.history || []);
+        if (overview.role === "ADMIN") {
+          const [sessions, logs] = await Promise.all([api("adminGetSessions"), api("adminGetLogs")]);
+          renderSessions(sessions.sessions || []);
+          renderLogs(logs.logs || []);
+        }
+        say(`อัปเดตข้อมูลแล้ว • ${dateText(new Date().toISOString())}`, true);
+      } catch (error) {
+        say(error.message);
+        if (String(error.message).includes("ไม่มีสิทธิ์") || String(error.message).includes("เซสชันผู้ดูแล")) {
+          $("login-status").textContent = error.message;
+          $("login-status").className = "status error";
+          $("admin-panel").classList.add("hidden");
+          $("login-panel").classList.remove("hidden");
+        }
+      }
+    }
+
+    function renderSettings(s) {
+      $("max-queue").value = Number(s.max_queue ?? 100);
+      $("max-per-user").value = Number(s.max_song_per_user ?? 5);
+      $("accept-requests").checked = s.accept_requests !== false;
+      $("vote-enabled").checked = s.vote_enabled !== false;
+      $("allow-unvote").checked = s.allow_unvote !== false;
+    }
+
+    function renderQueue(songs) {
+      const root = $("queue-list"); root.replaceChildren();
+      if (!songs.length) { root.innerHTML = '<div class="empty">ไม่มีเพลงที่กำลังเล่นหรือรอเล่น</div>'; return; }
+      for (const song of songs) {
+        const row = document.createElement("div"); row.className = "item";
+        const status = song.status === "PLAYING" ? "กำลังเล่น" : "รอเล่น";
+        row.innerHTML = `<div class="item-main"><div class="item-title">${esc(song.title)}</div><div class="item-meta"><span class="tag">${status}</span> ${song.vote_count} คะแนน • ผู้ส่ง ${esc(song.submitted_by)} • ${dateText(song.submitted_at)}${song.recipient ? ` • ถึง ${esc(song.recipient)}` : ""}${song.message ? `<br>${esc(song.message)}` : ""}</div></div>`;
+        if (song.status === "WAITING") {
+          const btn = document.createElement("button"); btn.className = "danger small-btn"; btn.textContent = "นำออก"; btn.dataset.removeSong = song.id;
+          row.append(btn);
+        }
+        root.append(row);
+      }
+    }
+
+    function renderSessions(sessions) {
+      const root = $("sessions-list"); root.replaceChildren();
+      if (!sessions.length) { root.innerHTML = '<div class="empty">ไม่มี Session</div>'; return; }
+      for (const session of sessions) {
+        const active = !session.revoked_at && new Date(session.expires_at).getTime() > Date.now();
+        const row = document.createElement("div"); row.className = "item";
+        row.innerHTML = `<div class="item-main"><div class="item-title">${esc(session.display_name)} <span class="tag">${active ? "ใช้งานได้" : "หมดอายุ/ถูกเพิกถอน"}</span></div><div class="item-meta">เริ่ม ${dateText(session.created_at)} • ใช้ล่าสุด ${dateText(session.last_seen_at)}</div></div>`;
+        if (active) { const btn = document.createElement("button"); btn.className = "danger small-btn"; btn.textContent = "เพิกถอน"; btn.dataset.revokeSession = session.id; row.append(btn); }
+        root.append(row);
+      }
+    }
+
+    function renderHistory(history) {
+      const root = $("history-list"); root.replaceChildren();
+      if (!history.length) { root.innerHTML = '<div class="empty">ยังไม่มีประวัติการเล่น</div>'; return; }
+      for (const entry of history) {
+        const song = entry.songs || {};
+        const row = document.createElement("div"); row.className = "item";
+        row.innerHTML = `<div class="item-main"><div class="item-title">${esc(song.title || "ไม่พบชื่อเพลง")}</div><div class="item-meta">${esc(song.submitted_by || "-")} • ${entry.final_vote_count} คะแนน • ${esc(entry.end_reason || "-")}<br>${dateText(entry.played_at)}</div></div>`;
+        root.append(row);
+      }
+    }
+
+    function renderLogs(logs) {
+      const root = $("logs-list"); root.replaceChildren();
+      if (!logs.length) { root.innerHTML = '<div class="empty">ยังไม่มีบันทึกการจัดการ</div>'; return; }
+      for (const log of logs) {
+        const row = document.createElement("div"); row.className = "item";
+        row.innerHTML = `<div class="item-main"><div class="item-title">${esc(log.action)}</div><div class="item-meta">${esc(log.actor_type)} • ${dateText(log.created_at)} • ${esc(log.reference_id || "-")}</div></div>`;
+        root.append(row);
+      }
+    }
+
+    $("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("login-btn"); button.disabled = true;
+      $("login-status").textContent = "กำลังเข้าสู่ระบบ…";
+      try {
+        const { error } = await client.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+        if (error) throw error;
+        await loadAll();
+      } catch (error) {
+        $("login-status").textContent = error.message;
+        $("login-status").className = "status error";
+      } finally { button.disabled = false; }
+    });
+
+    $("settings-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("save-settings"); button.disabled = true;
+      try {
+        await api("adminSaveSettings", { settings: {
+          max_queue: Number($("max-queue").value), max_song_per_user: Number($("max-per-user").value),
+          accept_requests: $("accept-requests").checked, vote_enabled: $("vote-enabled").checked,
+          allow_unvote: $("allow-unvote").checked,
+        }});
+        say("บันทึกการตั้งค่าเรียบร้อย", true);
+        await loadAll();
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("password-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const password = $("new-password").value;
+      if (password.length < 8 || password !== $("confirm-password").value) {
+        $("password-status").textContent = password.length < 8 ? "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" : "รหัสผ่านทั้งสองช่องไม่ตรงกัน";
+        $("password-status").className = "status error";
+        return;
+      }
+      const button = $("password-btn"); button.disabled = true;
+      try {
+        const { error } = await client.auth.updateUser({ password });
+        if (error) throw error;
+        $("password-form").reset();
+        $("password-status").textContent = "เปลี่ยนรหัสผ่านเรียบร้อย";
+        $("password-status").className = "status success";
+      } catch (error) {
+        $("password-status").textContent = error.message;
+        $("password-status").className = "status error";
+      } finally { button.disabled = false; }
+    });
+
+    $("queue-list").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-remove-song]"); if (!button) return;
+      if (!confirm("ยืนยันนำเพลงนี้ออกจากคิวหรือไม่?")) return;
+      button.disabled = true;
+      try { await api("adminRemoveSong", { song_id: button.dataset.removeSong }); say("นำเพลงออกจากคิวแล้ว", true); await loadAll(); }
+      catch (error) { say(error.message); button.disabled = false; }
+    });
+
+    $("clear-queue").addEventListener("click", async () => {
+      if (!confirm("ยืนยันนำเพลงที่รอเล่นทั้งหมดออกจากคิว? เพลงที่กำลังเล่นจะไม่ถูกกระทบ")) return;
+      const button = $("clear-queue"); button.disabled = true;
+      try { const result = await api("adminClearQueue"); say(`นำเพลงออกจากคิว ${result.removed_count} รายการ`, true); await loadAll(); }
+      catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("sessions-list").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-revoke-session]"); if (!button) return;
+      if (!confirm("ยืนยันเพิกถอน Session นี้? ผู้ใช้นั้นจะต้องเริ่มใช้งานใหม่")) return;
+      button.disabled = true;
+      try { await api("adminRevokeSession", { session_id: button.dataset.revokeSession }); say("เพิกถอน Session แล้ว", true); await loadAll(); }
+      catch (error) { say(error.message); button.disabled = false; }
+    });
+
+    $("refresh-btn").addEventListener("click", loadAll);
+    $("logout-btn").addEventListener("click", async () => { await client.auth.signOut(); currentRole = ""; $("admin-panel").classList.add("hidden"); $("login-panel").classList.remove("hidden"); $("logout-btn").classList.add("hidden"); $("refresh-btn").classList.add("hidden"); $("role-label").textContent = ""; });
+
+    if (!ready) {
+      $("login-btn").disabled = true;
+      $("login-status").textContent = "กรุณาตั้งค่า assets/config.js ด้วย Supabase URL และ Publishable Key จาก Phase 2";
+      $("login-status").className = "status error";
+    } else {
+      const { data: { session } } = await client.auth.getSession();
+      if (session) await loadAll();
+    }
+  </script>
+</body>
+</html>
