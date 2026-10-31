@@ -4,27 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Music Room — Admin</title>
+  <title>เสียงตามสาย...โป่งก้อนเส้า | ผู้ดูแลระบบ</title>
   <style>
     :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
     *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 16px;font-size:19px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input[type=email],.field input[type=password],.field input[type=number],.field input[type=text]{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:center;padding:11px;background:#f7f9fc;border-radius:8px;font-size:14px}.check input{width:17px;height:17px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white}button.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.list{display:grid;gap:9px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e6ebf2;border-radius:10px}.item-main{min-width:0;flex:1}.item-title{font-weight:650;overflow-wrap:anywhere}.item-meta{font-size:12px;color:#718198;margin-top:3px;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#eaf1f9;color:#315a84;font-size:11px;margin-right:5px}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.scroll{max-height:430px;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:9px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.hidden{display:none!important}.error{color:#b42332}.success{color:#157347}.login{max-width:440px;margin:8vh auto}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small-btn{padding:7px 10px;font-size:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
     @media(max-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.checks{grid-template-columns:1fr}.panel{padding:15px}.item{align-items:flex-start}}
   </style>
+  <link rel="stylesheet" href="assets/modern-blue.css">
 </head>
 <body>
-  <header>
-    <h1>♫ Music Room — Admin</h1>
-    <div class="actions" style="margin:0">
-      <a href="./rooms.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">เลือกห้อง</a>
-      <a href="./library.html?room=one" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">คลังเพลง</a>
-      <a href="./analytics.html?room=one" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">รายงานสถิติ</a>
-      <a href="#appearance-panel" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">ธีม/กิจกรรม</a>
-      <span id="role-label" class="muted" style="color:#d1ddec"></span>
+    <header class="site-header">
+    <a class="brand-lockup" href="./index.html?room=one" aria-label="เสียงตามสาย โป่งก้อนเส้า">
+      <span class="brand-mark" aria-hidden="true">♫</span>
+      <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>ศูนย์จัดการระบบ</small></span>
+    </a>
+    <nav class="header-nav" aria-label="เมนูผู้ดูแล">
+      <a href="./rooms.html" class="nav-link">เลือกห้อง</a>
+      <a href="./library.html?room=one" class="nav-link">คลังเพลง</a>
+      <a href="./analytics.html?room=one" class="nav-link">รายงานสถิติ</a>
+      <a href="#appearance-panel" class="nav-link">ธีม / กิจกรรม</a>
+      <span id="role-label" class="connection-pill"></span>
       <button id="refresh-btn" class="secondary hidden">รีเฟรชข้อมูล</button>
       <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
-    </div>
+    </nav>
   </header>
-  <main>
+  <main class="page-main">
     <section id="login-panel" class="panel login">
       <h2>เข้าสู่ระบบผู้ดูแล</h2>
       <p class="muted">ใช้บัญชีที่สร้างไว้ใน Supabase Authentication และได้รับสิทธิ์ใน admin_profiles แล้วเท่านั้น</p>
@@ -160,7 +164,7 @@
       </section>
       <p id="admin-status" class="status" role="status"></p>
     </section>
-    <p class="footer">YouTube Music Queue Manager • Admin Console</p>
+    <p class="footer">เสียงตามสาย...โป่งก้อนเส้า • ศูนย์จัดการระบบ</p>
   </main>
 
   <script type="module">

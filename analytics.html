@@ -4,23 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Music Room — Analytics</title>
+  <title>เสียงตามสาย...โป่งก้อนเส้า | รายงานสถิติ</title>
   <style>
     :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
     *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:22px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 14px;font-size:18px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.error{color:#b42332}.success{color:#157347}.hidden{display:none!important}.login{max-width:440px;margin:8vh auto}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}button,.linkbtn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white;text-decoration:none}button.secondary,.linkbtn.secondary{background:#e8eef6;color:#27425f}button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.toolbar label{min-width:150px}.toolbar select{display:block;margin-top:6px;padding:10px 12px;border:1px solid #ccd6e3;border-radius:8px;background:white;font:inherit;color:#182437}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.chart{display:grid;gap:7px}.chart-row{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;font-size:12px;color:#617187}.bar-area{height:32px;background:transparent;border-radius:6px;overflow:hidden;display:grid;grid-template-rows:1fr 1fr;gap:2px}.bar{min-width:0;max-width:100%;border-radius:4px;justify-self:start}.bar.requests{background:#3b82b9}.bar.plays{background:#6e9b78}.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 14px;font-size:12px;color:#617187}.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}.dot.req{background:#3b82b9}.dot.play{background:#6e9b78}.table-wrap{overflow:auto;max-height:440px}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:10px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.num{text-align:right!important;font-variant-numeric:tabular-nums}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.notice{font-size:12px;color:#8a5a12;background:#fff8e8;border:1px solid #f2dfb4;border-radius:8px;padding:10px;margin-top:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
     @media(max-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.panel{padding:15px}.chart-row{grid-template-columns:58px 1fr}.stat strong{font-size:23px}}
   </style>
+  <link rel="stylesheet" href="assets/modern-blue.css">
 </head>
 <body>
-  <header>
-    <h1>♫ Music Room — Analytics</h1>
-    <div class="actions">
-      <a class="linkbtn secondary" href="./rooms.html">เลือกห้อง</a>
-      <a class="linkbtn secondary" href="./admin.html?room=one" id="admin-link">กลับหน้า Admin</a>
+    <header class="site-header">
+    <a class="brand-lockup" href="./index.html?room=one" aria-label="เสียงตามสาย โป่งก้อนเส้า">
+      <span class="brand-mark" aria-hidden="true">♫</span>
+      <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>รายงานและสถิติการใช้งาน</small></span>
+    </a>
+    <nav class="header-nav" aria-label="เมนูรายงาน">
+      <a class="nav-link" href="./rooms.html">เลือกห้อง</a>
+      <a class="nav-link nav-link-primary" href="./admin.html?room=one" id="admin-link">กลับหน้า Admin</a>
       <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
-    </div>
+    </nav>
   </header>
-  <main>
+  <main class="page-main">
     <section id="login-panel" class="panel login">
       <h2>เข้าสู่ระบบเพื่อดูรายงาน</h2>
       <p class="muted">ใช้บัญชี ADMIN หรือ MODERATOR ที่ได้รับสิทธิ์ในระบบเดิม</p>
@@ -94,7 +98,7 @@
         </div>
       </section>
     </section>
-    <p class="footer">YouTube Music Queue Manager • Analytics • Asia/Bangkok</p>
+    <p class="footer">เสียงตามสาย...โป่งก้อนเส้า • รายงานสถิติ</p>
   </main>
 
   <script type="module">

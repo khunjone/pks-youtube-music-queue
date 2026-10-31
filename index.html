@@ -3,12 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>YouTube Music Queue Manager</title>
+  <title>เสียงตามสาย...โป่งก้อนเส้า | หน้าห้องเพลง</title>
   <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/modern-blue.css">
 </head>
 <body>
-  <header><h1>♫ Music Room</h1><span id="connection">กำลังเชื่อมต่อ…</span><a id="library-link" href="./library.html?room=one" style="color:#fff;text-decoration:none;border:1px solid #a9bfd8;border-radius:8px;padding:7px 10px;font-size:13px">คลังเพลง</a><a href="./rooms.html" style="color:#fff;text-decoration:none;border:1px solid #a9bfd8;border-radius:8px;padding:7px 10px;font-size:13px">เลือกห้อง</a></header>
-  <main>
+    <header class="site-header">
+    <a class="brand-lockup" href="./index.html?room=one" aria-label="เสียงตามสาย โป่งก้อนเส้า หน้าห้องเพลง">
+      <span class="brand-mark" aria-hidden="true">♫</span>
+      <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>ระบบแบ่งปันเสียงเพลงของโรงเรียน</small></span>
+    </a>
+    <nav class="header-nav" aria-label="เมนูหลัก">
+      <span id="connection" class="connection-pill">กำลังเชื่อมต่อ…</span>
+      <a id="library-link" class="nav-link" href="./library.html?room=one">คลังเพลง</a>
+      <a class="nav-link nav-link-primary" href="./rooms.html">เลือกห้องเพลง</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    <section class="page-intro">
+      <div><p class="eyebrow">โรงเรียนวัดโป่งก้อนเส้า · SCHOOL RADIO</p><h2>ส่งเพลงที่ชอบ...แบ่งปันความสุขให้กัน</h2><p>ค้นหาเพลง ฝากข้อความถึงเพื่อน และร่วมโหวตเพลงในห้องเพลงของเรา</p></div>
+      <span class="intro-note"><strong>♫</strong><small>เพลงของเรา<br>เสียงของชุมชน</small></span>
+    </section>
     <section id="session-panel" class="panel">
       <h2>เริ่มใช้งาน</h2>
       <label>ชื่อผู้ส่งเพลง <input id="display-name" maxlength="80" placeholder="กรอกชื่อของคุณ"></label>

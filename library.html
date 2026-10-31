@@ -4,23 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Music Room — คลังเพลง</title>
+  <title>เสียงตามสาย...โป่งก้อนเส้า | คลังเพลง</title>
   <style>
     :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
     *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:17px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:22px;margin:0}main{width:min(1120px,94vw);margin:22px auto 55px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:18px;margin:0 0 16px;box-shadow:0 6px 20px #1b31500b}.panel h2{font-size:18px;margin:0 0 13px}.muted{color:#68788e;font-size:13px}.status{min-height:22px;color:#1e598d;font-size:13px}.error{color:#b42332}.success{color:#157347}.hidden{display:none!important}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.field{display:block;margin:10px 0;color:#46566b;font-size:13px}.field input,.field select{display:block;width:100%;margin-top:5px;padding:10px 11px;border:1px solid #ccd6e3;border-radius:8px;background:white;font:inherit;color:#182437}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.toolbar .field{margin:0}button,.linkbtn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:9px 12px;font:600 13px system-ui;cursor:pointer;background:#1d568d;color:white;text-decoration:none}button.secondary,.linkbtn.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.track-list{display:grid;gap:9px}.track{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid #e5ebf3;border-radius:10px;min-width:0}.track img{width:104px;aspect-ratio:16/9;object-fit:cover;border-radius:7px;background:#e8eef6;flex:none}.track-main{min-width:0;flex:1}.track-title{font-size:14px;font-weight:650;overflow-wrap:anywhere}.track-meta{font-size:12px;color:#718198;margin-top:3px}.track-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.track-actions button{padding:7px 9px;font-size:12px}.empty{padding:17px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.playlist-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:1px solid #e5ebf3;border-radius:9px;margin:8px 0}.playlist-name{font-weight:650;min-width:0;overflow-wrap:anywhere}.playlist-actions{display:flex;gap:5px;flex-wrap:wrap}.playlist-actions button{padding:7px 9px;font-size:12px}.tag{display:inline-block;border-radius:20px;padding:3px 8px;background:#eaf1f9;color:#315a84;font-size:11px}.footer{text-align:center;color:#8390a2;font-size:12px;margin:24px 0}.notice{background:#fff8e8;border:1px solid #f2dfb4;color:#8a5a12;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
     @media(max-width:760px){.two{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}.track{align-items:flex-start;flex-wrap:wrap}.track img{width:90px}.track-main{min-width:calc(100% - 110px)}.track-actions{width:100%}.panel{padding:14px}}
   </style>
+  <link rel="stylesheet" href="assets/modern-blue.css">
 </head>
 <body>
-  <header>
-    <h1>♫ Music Room — คลังเพลง</h1>
-    <div class="actions">
-      <a class="linkbtn secondary" href="./index.html?room=one">กลับหน้าห้องเพลง</a>
-      <a class="linkbtn secondary" href="./admin.html?room=one">Admin</a>
-      <a class="linkbtn secondary" href="./rooms.html">เลือกห้อง</a>
-    </div>
+    <header class="site-header">
+    <a class="brand-lockup" href="./index.html?room=one" aria-label="เสียงตามสาย โป่งก้อนเส้า">
+      <span class="brand-mark" aria-hidden="true">♫</span>
+      <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>คลังเพลงและรายการโปรด</small></span>
+    </a>
+    <nav class="header-nav" aria-label="เมนูหลัก">
+      <a class="nav-link" href="./index.html?room=one">หน้าห้องเพลง</a>
+      <a class="nav-link" href="./rooms.html">เลือกห้อง</a>
+      <a class="nav-link nav-link-primary" href="./admin.html?room=one">ผู้ดูแล</a>
+    </nav>
   </header>
-  <main>
+  <main class="page-main">
     <section id="session-panel" class="panel">
       <h2>เริ่มใช้งานคลังเพลง</h2>
       <p class="muted">ใช้ชื่อเดียวกับห้องเพลงเพื่อเข้าถึงรายการโปรดและ Playlist ของ Session นี้</p>
@@ -76,7 +80,7 @@
       </section>
       <p class="notice">รายการโปรดและ Playlist ส่วนตัวผูกกับ Session ของเบราว์เซอร์ ไม่ใช่บัญชีผู้ใช้ถาวร หากเปลี่ยนเบราว์เซอร์ ล้างข้อมูลเว็บไซต์ หรือ Session หมดอายุ/ถูกเพิกถอน อาจไม่สามารถเข้าถึงรายการเดิมได้</p>
     </section>
-    <p class="footer">YouTube Music Queue Manager • Music Library</p>
+    <p class="footer">เสียงตามสาย...โป่งก้อนเส้า • คลังเพลง</p>
   </main>
 
   <script type="module">

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Music Room Player</title>
+  <title>เสียงตามสาย...โป่งก้อนเส้า | เครื่องเล่นหลัก</title>
   <style>
     :root { color-scheme: dark; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:#101827; color:#edf3fb; }
     * { box-sizing:border-box; }
@@ -33,13 +33,21 @@
     .warning { color:#ffdb9b; }
     @media (max-width:600px) { header { align-items:flex-start; flex-direction:column; } .panel { padding:15px; } }
   </style>
+  <link rel="stylesheet" href="assets/modern-blue.css">
 </head>
 <body>
-  <header>
-    <h1>♫ Music Room — Player</h1>
-    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap"><span id="room-label" class="pill">ห้อง: one</span><a href="./rooms.html" style="color:#d9e9fb;text-decoration:none;font-size:13px">เลือกห้อง</a><span id="connection" class="pill">ยังไม่ได้เชื่อมต่อ</span></div>
+    <header class="site-header">
+    <a class="brand-lockup" href="./index.html?room=one" aria-label="เสียงตามสาย โป่งก้อนเส้า">
+      <span class="brand-mark" aria-hidden="true">♫</span>
+      <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>ศูนย์ควบคุมเครื่องเล่น</small></span>
+    </a>
+    <nav class="header-nav" aria-label="เมนูหลัก">
+      <span id="room-label" class="connection-pill">ห้อง: one</span>
+      <a class="nav-link" href="./rooms.html">เลือกห้องเพลง</a>
+      <span id="connection" class="connection-pill">ยังไม่ได้เชื่อมต่อ</span>
+    </nav>
   </header>
-  <main>
+  <main class="page-main">
     <section class="panel" id="connect-panel">
       <h2>เชื่อมต่อเครื่องเล่นหลัก</h2>
       <p class="muted">ใช้เฉพาะอุปกรณ์ที่ต่อกับลำโพงของห้องเพลง และเปิดหน้านี้ค้างไว้ขณะใช้งาน</p>
