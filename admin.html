@@ -7,7 +7,7 @@
   <title>Music Room — Admin</title>
   <style>
     :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
-    *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 16px;font-size:19px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input[type=email],.field input[type=password],.field input[type=number]{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:center;padding:11px;background:#f7f9fc;border-radius:8px;font-size:14px}.check input{width:17px;height:17px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white}button.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.list{display:grid;gap:9px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e6ebf2;border-radius:10px}.item-main{min-width:0;flex:1}.item-title{font-weight:650;overflow-wrap:anywhere}.item-meta{font-size:12px;color:#718198;margin-top:3px;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#eaf1f9;color:#315a84;font-size:11px;margin-right:5px}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.scroll{max-height:430px;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:9px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.hidden{display:none!important}.error{color:#b42332}.success{color:#157347}.login{max-width:440px;margin:8vh auto}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small-btn{padding:7px 10px;font-size:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 16px;font-size:19px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input[type=email],.field input[type=password],.field input[type=number],.field input[type=text]{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:center;padding:11px;background:#f7f9fc;border-radius:8px;font-size:14px}.check input{width:17px;height:17px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white}button.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.list{display:grid;gap:9px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e6ebf2;border-radius:10px}.item-main{min-width:0;flex:1}.item-title{font-weight:650;overflow-wrap:anywhere}.item-meta{font-size:12px;color:#718198;margin-top:3px;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#eaf1f9;color:#315a84;font-size:11px;margin-right:5px}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.scroll{max-height:430px;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:9px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.hidden{display:none!important}.error{color:#b42332}.success{color:#157347}.login{max-width:440px;margin:8vh auto}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small-btn{padding:7px 10px;font-size:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
     @media(max-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.checks{grid-template-columns:1fr}.panel{padding:15px}.item{align-items:flex-start}}
   </style>
 </head>
@@ -15,6 +15,7 @@
   <header>
     <h1>♫ Music Room — Admin</h1>
     <div class="actions" style="margin:0">
+      <a href="./library.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">คลังเพลง</a>
       <a href="./analytics.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">รายงานสถิติ</a>
       <span id="role-label" class="muted" style="color:#d1ddec"></span>
       <button id="refresh-btn" class="secondary hidden">รีเฟรชข้อมูล</button>
@@ -79,6 +80,16 @@
         <div id="queue-list" class="list"><div class="empty">กำลังโหลดคิว…</div></div>
       </section>
 
+      <section class="panel hidden" id="room-playlist-panel">
+        <h2>จัดการเพลงประจำห้อง</h2>
+        <p class="muted">เพิ่มเพลงจาก YouTube URL หรือ Video ID เพลงในรายการนี้จะแสดงให้ผู้ใช้ทุกคนเห็นในหน้าคลังเพลง แต่จะไม่ถูกเพิ่มเข้าคิวหรือเล่นเองอัตโนมัติ</p>
+        <form id="room-playlist-form" class="two">
+          <label class="field">YouTube URL หรือ Video ID<input id="room-video-input" type="text" maxlength="300" placeholder="https://www.youtube.com/watch?v=xxxxxxxxxxx หรือ Video ID" required></label>
+          <div style="align-self:end;margin-bottom:12px"><button id="room-playlist-add" type="submit">เพิ่มเพลงประจำห้อง</button></div>
+        </form>
+        <div id="room-playlist-list" class="list"><div class="empty">กำลังโหลดรายการ…</div></div>
+      </section>
+
       <div class="two">
         <section class="panel" id="sessions-panel">
           <h2>Session ผู้ใช้งานล่าสุด</h2>
@@ -135,7 +146,7 @@
       $("logout-btn").classList.remove("hidden");
       $("refresh-btn").classList.remove("hidden");
       $("role-label").textContent = role === "ADMIN" ? "สิทธิ์ ADMIN" : "สิทธิ์ MODERATOR";
-      for (const id of ["settings-panel", "sessions-panel", "logs-panel"]) {
+      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel"]) {
         $(id).classList.toggle("hidden", role !== "ADMIN");
       }
     }
@@ -164,6 +175,7 @@
           const [sessions, logs] = await Promise.all([api("adminGetSessions"), api("adminGetLogs")]);
           renderSessions(sessions.sessions || []);
           renderLogs(logs.logs || []);
+          await loadRoomPlaylist();
         }
         say(`อัปเดตข้อมูลแล้ว • ${dateText(new Date().toISOString())}`, true);
       } catch (error) {
@@ -174,6 +186,23 @@
           $("admin-panel").classList.add("hidden");
           $("login-panel").classList.remove("hidden");
         }
+      }
+    }
+
+    async function loadRoomPlaylist() {
+      const result = await api("adminGetRoomPlaylist");
+      const root = $("room-playlist-list"); root.replaceChildren();
+      if (!(result.songs || []).length) {
+        const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "ยังไม่มีเพลงประจำห้อง"; root.append(empty); return;
+      }
+      for (const song of result.songs) {
+        const row = document.createElement("div"); row.className = "item";
+        const main = document.createElement("div"); main.className = "item-main";
+        const title = document.createElement("div"); title.className = "item-title"; title.textContent = song.title;
+        const meta = document.createElement("div"); meta.className = "item-meta"; meta.textContent = `${song.channel_title || ""} • ${song.video_id}`;
+        main.append(title, meta);
+        const button = document.createElement("button"); button.className = "danger small-btn"; button.textContent = "นำออก"; button.dataset.removeRoomTrack = song.id;
+        row.append(main, button); root.append(row);
       }
     }
 
@@ -305,6 +334,28 @@
       button.disabled = true;
       try { await api("adminRevokeSession", { session_id: button.dataset.revokeSession }); say("เพิกถอน Session แล้ว", true); await loadAll(); }
       catch (error) { say(error.message); button.disabled = false; }
+    });
+
+    $("room-playlist-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("room-playlist-add"); button.disabled = true;
+      try {
+        await api("adminRoomPlaylistAdd", { video_id: $("room-video-input").value.trim() });
+        $("room-video-input").value = "";
+        await loadRoomPlaylist();
+        say("เพิ่มเพลงประจำห้องแล้ว", true);
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("room-playlist-list").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-remove-room-track]"); if (!button) return;
+      if (!confirm("ยืนยันนำเพลงนี้ออกจากเพลงประจำห้อง?")) return;
+      button.disabled = true;
+      try {
+        await api("adminRoomPlaylistRemove", { playlist_song_id: button.dataset.removeRoomTrack });
+        await loadRoomPlaylist(); say("นำเพลงออกจากเพลงประจำห้องแล้ว", true);
+      } catch (error) { say(error.message); button.disabled = false; }
     });
 
     $("refresh-btn").addEventListener("click", loadAll);

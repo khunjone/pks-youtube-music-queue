@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Music Room — คลังเพลง</title>
+  <style>
+    :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:17px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:22px;margin:0}main{width:min(1120px,94vw);margin:22px auto 55px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:18px;margin:0 0 16px;box-shadow:0 6px 20px #1b31500b}.panel h2{font-size:18px;margin:0 0 13px}.muted{color:#68788e;font-size:13px}.status{min-height:22px;color:#1e598d;font-size:13px}.error{color:#b42332}.success{color:#157347}.hidden{display:none!important}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.field{display:block;margin:10px 0;color:#46566b;font-size:13px}.field input,.field select{display:block;width:100%;margin-top:5px;padding:10px 11px;border:1px solid #ccd6e3;border-radius:8px;background:white;font:inherit;color:#182437}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.toolbar .field{margin:0}button,.linkbtn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:9px 12px;font:600 13px system-ui;cursor:pointer;background:#1d568d;color:white;text-decoration:none}button.secondary,.linkbtn.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.track-list{display:grid;gap:9px}.track{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid #e5ebf3;border-radius:10px;min-width:0}.track img{width:104px;aspect-ratio:16/9;object-fit:cover;border-radius:7px;background:#e8eef6;flex:none}.track-main{min-width:0;flex:1}.track-title{font-size:14px;font-weight:650;overflow-wrap:anywhere}.track-meta{font-size:12px;color:#718198;margin-top:3px}.track-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.track-actions button{padding:7px 9px;font-size:12px}.empty{padding:17px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.playlist-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:1px solid #e5ebf3;border-radius:9px;margin:8px 0}.playlist-name{font-weight:650;min-width:0;overflow-wrap:anywhere}.playlist-actions{display:flex;gap:5px;flex-wrap:wrap}.playlist-actions button{padding:7px 9px;font-size:12px}.tag{display:inline-block;border-radius:20px;padding:3px 8px;background:#eaf1f9;color:#315a84;font-size:11px}.footer{text-align:center;color:#8390a2;font-size:12px;margin:24px 0}.notice{background:#fff8e8;border:1px solid #f2dfb4;color:#8a5a12;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
+    @media(max-width:760px){.two{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}.track{align-items:flex-start;flex-wrap:wrap}.track img{width:90px}.track-main{min-width:calc(100% - 110px)}.track-actions{width:100%}.panel{padding:14px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>♫ Music Room — คลังเพลง</h1>
+    <div class="actions">
+      <a class="linkbtn secondary" href="./index.html">กลับหน้าห้องเพลง</a>
+      <a class="linkbtn secondary" href="./admin.html">Admin</a>
+    </div>
+  </header>
+  <main>
+    <section id="session-panel" class="panel">
+      <h2>เริ่มใช้งานคลังเพลง</h2>
+      <p class="muted">ใช้ชื่อเดียวกับห้องเพลงเพื่อเข้าถึงรายการโปรดและ Playlist ของ Session นี้</p>
+      <form id="session-form" class="toolbar">
+        <label class="field">ชื่อผู้ใช้งาน<input id="display-name" maxlength="80" required placeholder="กรอกชื่อของคุณ"></label>
+        <button id="start-session" type="submit">เข้าสู่คลังเพลง</button>
+      </form>
+      <p id="session-status" class="status" role="status"></p>
+    </section>
+
+    <section id="library-panel" class="hidden">
+      <section class="panel">
+        <div class="toolbar">
+          <div><h2 style="margin-bottom:3px">คลังเพลงของฉัน</h2><span id="session-label" class="muted"></span></div>
+          <div class="actions"><button id="reload-btn" class="secondary">รีเฟรช</button><button id="new-session-btn" class="secondary">เปลี่ยน Session</button></div>
+        </div>
+        <p id="status" class="status" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <h2>ค้นหาเพลงเพื่อบันทึก</h2>
+        <form id="search-form" class="toolbar">
+          <label class="field">ชื่อเพลงหรือศิลปิน<input id="query" minlength="2" required placeholder="เช่น เพลงรัก ศิลปิน"></label>
+          <button id="search-btn" type="submit">ค้นหา YouTube</button>
+        </form>
+        <div id="search-results" class="track-list" style="margin-top:12px"></div>
+      </section>
+
+      <div class="two">
+        <section class="panel">
+          <h2>รายการโปรด <span id="favorite-count" class="tag">0 เพลง</span></h2>
+          <div id="favorites-list" class="track-list"><div class="empty">ยังไม่มีเพลงโปรด</div></div>
+        </section>
+        <section class="panel">
+          <h2>สร้าง Playlist ส่วนตัว</h2>
+          <form id="create-playlist-form" class="toolbar">
+            <label class="field">ชื่อ Playlist<input id="playlist-name" maxlength="60" required placeholder="เช่น เพลงฟังตอนทำงาน"></label>
+            <button id="create-playlist-btn" type="submit">สร้าง Playlist</button>
+          </form>
+          <p class="muted">สร้างได้สูงสุด 30 Playlist ต่อ Session และเพิ่มเพลงได้สูงสุด 100 เพลงต่อ Playlist</p>
+          <div id="playlists-list"><div class="empty">ยังไม่มี Playlist</div></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2 id="selected-playlist-title">เพลงใน Playlist</h2>
+        <div id="playlist-tracks" class="track-list"><div class="empty">เลือก Playlist เพื่อดูรายการเพลง</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="toolbar"><div><h2 style="margin-bottom:3px">เพลงประจำห้อง</h2><span class="muted">รายการเพลงกลางที่ผู้ดูแลคัดเลือกไว้ ทุกคนสามารถเพิ่มเพลงเหล่านี้เข้าคิวได้</span></div><span class="tag">Shared</span></div>
+        <div id="room-songs" class="track-list" style="margin-top:12px"><div class="empty">กำลังโหลด…</div></div>
+      </section>
+      <p class="notice">รายการโปรดและ Playlist ส่วนตัวผูกกับ Session ของเบราว์เซอร์ ไม่ใช่บัญชีผู้ใช้ถาวร หากเปลี่ยนเบราว์เซอร์ ล้างข้อมูลเว็บไซต์ หรือ Session หมดอายุ/ถูกเพิกถอน อาจไม่สามารถเข้าถึงรายการเดิมได้</p>
+    </section>
+    <p class="footer">YouTube Music Queue Manager • Music Library</p>
+  </main>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
+
+    const $ = (id) => document.getElementById(id);
+    const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") &&
+      typeof SUPABASE_PUBLISHABLE_KEY === "string" && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
+    let token = localStorage.getItem("ymq_session_token") || "";
+    let selectedPlaylistId = "";
+    let selectedPlaylistName = "";
+
+    const setStatus = (message, kind = "") => { $("status").textContent = message || ""; $("status").className = `status ${kind}`; };
+    const api = async (action, data = {}) => {
+      if (!ready) throw new Error("กรุณาตั้งค่า assets/config.js ให้ถูกต้อง");
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "apikey":SUPABASE_PUBLISHABLE_KEY, ...(token ? {"x-session-token":token} : {}) },
+        body: JSON.stringify({ action, ...data }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      return result;
+    };
+    const node = (tag, cls, text) => { const el=document.createElement(tag); if(cls) el.className=cls; if(text!==undefined) el.textContent=text; return el; };
+
+    function showSession(message = "") {
+      $("library-panel").classList.add("hidden");
+      $("session-panel").classList.remove("hidden");
+      $("session-status").textContent = message;
+      $("session-status").className = `status ${message ? "error" : ""}`;
+    }
+
+    function renderTrack(root, song, actions) {
+      const card = node("article", "track");
+      if (song.thumbnail) { const image=node("img"); image.src=song.thumbnail; image.alt=""; image.loading="lazy"; card.append(image); }
+      const main=node("div","track-main");
+      main.append(node("div","track-title",song.title || "ไม่ทราบชื่อเพลง"));
+      main.append(node("div","track-meta",song.channel_title || ""));
+      const buttons=node("div","track-actions");
+      for (const item of actions) {
+        const button=node("button",item.kind || "secondary",item.label);
+        button.dataset.action=item.action;
+        if (item.value) button.dataset.value=item.value;
+        if (item.extra) for (const [key,value] of Object.entries(item.extra)) button.dataset[key]=value;
+        buttons.append(button);
+      }
+      main.append(buttons); card.append(main); root.append(card);
+    }
+
+    function renderFavorites(rows) {
+      const root=$("favorites-list"); root.replaceChildren();
+      $("favorite-count").textContent=`${rows.length.toLocaleString("th-TH")} เพลง`;
+      if (!rows.length) { root.append(node("div","empty","ยังไม่มีเพลงโปรด")); return; }
+      for (const song of rows) renderTrack(root,song,[
+        {label:"เพิ่มเข้าคิว",action:"queue",value:song.video_id},
+        {label:"นำออกจากรายการโปรด",action:"favorite-remove",value:song.video_id,kind:"danger"},
+      ]);
+    }
+
+    function renderPlaylists(rows) {
+      const root=$("playlists-list"); root.replaceChildren();
+      if (!rows.length) { root.append(node("div","empty","ยังไม่มี Playlist")); return; }
+      for (const playlist of rows) {
+        const row=node("div","playlist-row");
+        row.append(node("div","playlist-name",playlist.name));
+        const controls=node("div","playlist-actions");
+        const open=node("button","secondary","เปิด"); open.dataset.action="playlist-open"; open.dataset.value=playlist.id;
+        const rename=node("button","secondary","เปลี่ยนชื่อ"); rename.dataset.action="playlist-rename"; rename.dataset.value=playlist.id; rename.dataset.name=playlist.name;
+        const remove=node("button","danger","ลบ"); remove.dataset.action="playlist-delete"; remove.dataset.value=playlist.id; remove.dataset.name=playlist.name;
+        controls.append(open,rename,remove); row.append(controls); root.append(row);
+      }
+    }
+
+    function renderRoomSongs(rows) {
+      const root=$("room-songs"); root.replaceChildren();
+      if (!rows.length) { root.append(node("div","empty","ผู้ดูแลยังไม่ได้เพิ่มเพลงประจำห้อง")); return; }
+      for (const song of rows) renderTrack(root,song,[{label:"เพิ่มเข้าคิว",action:"queue",value:song.video_id}]);
+    }
+
+    function renderPlaylistTracks(rows) {
+      const root=$("playlist-tracks"); root.replaceChildren();
+      if (!rows.length) { root.append(node("div","empty","Playlist นี้ยังไม่มีเพลง")); return; }
+      for (const song of rows) renderTrack(root,song,[
+        {label:"เพิ่มเข้าคิว",action:"queue",value:song.video_id},
+        {label:"นำออก",action:"playlist-track-remove",value:song.id,kind:"danger",extra:{playlistId:selectedPlaylistId}},
+      ]);
+    }
+
+    async function loadLibrary() {
+      try {
+        setStatus("กำลังโหลดคลังเพลง…");
+        const data=await api("libraryGet");
+        $("session-panel").classList.add("hidden"); $("library-panel").classList.remove("hidden");
+        $("session-label").textContent=`Session: ${data.display_name}`;
+        renderFavorites(data.favorites || []);
+        renderPlaylists(data.playlists || []);
+        renderRoomSongs(data.room_playlist?.songs || []);
+        if (!selectedPlaylistId && (data.playlists || []).length) {
+          selectedPlaylistId=data.playlists[0].id; selectedPlaylistName=data.playlists[0].name;
+          await openPlaylist(selectedPlaylistId,selectedPlaylistName);
+        } else if (selectedPlaylistId && (data.playlists || []).some(p=>p.id===selectedPlaylistId)) {
+          const p=data.playlists.find(p=>p.id===selectedPlaylistId); selectedPlaylistName=p.name;
+          await openPlaylist(selectedPlaylistId,selectedPlaylistName);
+        } else {
+          selectedPlaylistId=""; selectedPlaylistName="";
+          $("selected-playlist-title").textContent="เพลงใน Playlist";
+          $("playlist-tracks").replaceChildren(node("div","empty","เลือก Playlist เพื่อดูรายการเพลง"));
+        }
+        setStatus("โหลดคลังเพลงเรียบร้อย", "success");
+      } catch (error) {
+        if (/Session หมดอายุ|เริ่มใช้งานด้วยชื่อผู้ส่ง/.test(error.message)) {
+          localStorage.removeItem("ymq_session_token"); token=""; showSession("Session หมดอายุ กรุณาเริ่มใช้งานใหม่");
+        } else setStatus(error.message,"error");
+      }
+    }
+
+    async function openPlaylist(id,name) {
+      const result=await api("libraryGetPlaylist",{playlist_id:id});
+      selectedPlaylistId=id; selectedPlaylistName=result.playlist.name || name;
+      $("selected-playlist-title").textContent=`${selectedPlaylistName} • ${result.songs.length} เพลง`;
+      renderPlaylistTracks(result.songs || []);
+    }
+
+    function renderSearch(rows) {
+      const root=$("search-results"); root.replaceChildren();
+      if (!rows.length) { root.append(node("div","empty","ไม่พบเพลงที่ค้นหา")); return; }
+      for (const song of rows) renderTrack(root,song,[
+        {label:"เพิ่มเข้าคิว",action:"queue",value:song.video_id},
+        {label:"บันทึกรายการโปรด",action:"favorite-add",value:song.video_id},
+        {label:"เพิ่มใน Playlist ที่เลือก",action:"playlist-add",value:song.video_id},
+      ]);
+    }
+
+    $("session-form").addEventListener("submit",async event=>{
+      event.preventDefault();
+      const button=$("start-session"); button.disabled=true;
+      try {
+        const result=await api("createSession",{display_name:$("display-name").value.trim()});
+        token=result.session_token; localStorage.setItem("ymq_session_token",token); selectedPlaylistId="";
+        await loadLibrary();
+      } catch(error) { $("session-status").textContent=error.message; $("session-status").className="status error"; }
+      finally { button.disabled=false; }
+    });
+
+    $("search-form").addEventListener("submit",async event=>{
+      event.preventDefault(); const button=$("search-btn"); button.disabled=true;
+      try { setStatus("กำลังค้นหา YouTube…"); const result=await api("searchSongs",{query:$("query").value.trim()}); renderSearch(result.items || []); setStatus(`พบ ${result.items?.length || 0} เพลง`,"success"); }
+      catch(error) { setStatus(error.message,"error"); }
+      finally { button.disabled=false; }
+    });
+
+    $("create-playlist-form").addEventListener("submit",async event=>{
+      event.preventDefault(); const button=$("create-playlist-btn"); button.disabled=true;
+      try { const result=await api("playlistCreate",{name:$("playlist-name").value.trim()}); $("playlist-name").value=""; selectedPlaylistId=result.playlist.id; selectedPlaylistName=result.playlist.name; await loadLibrary(); setStatus("สร้าง Playlist แล้ว","success"); }
+      catch(error) { setStatus(error.message,"error"); }
+      finally { button.disabled=false; }
+    });
+
+    document.addEventListener("click",async event=>{
+      const button=event.target.closest("button[data-action]"); if(!button) return;
+      const action=button.dataset.action; const value=button.dataset.value; button.disabled=true;
+      try {
+        if(action==="queue") {
+          await api("addToQueue",{video_id:value}); setStatus("เพิ่มเพลงเข้าคิวแล้ว","success");
+        } else if(action==="favorite-add") {
+          await api("favoriteAdd",{video_id:value}); await loadLibrary(); setStatus("บันทึกเพลงโปรดแล้ว","success");
+        } else if(action==="favorite-remove") {
+          await api("favoriteRemove",{video_id:value}); await loadLibrary(); setStatus("นำเพลงออกจากรายการโปรดแล้ว","success");
+        } else if(action==="playlist-add") {
+          if(!selectedPlaylistId) throw new Error("กรุณาสร้างและเลือก Playlist ก่อน");
+          await api("playlistAddSong",{playlist_id:selectedPlaylistId,video_id:value}); await loadLibrary(); setStatus("เพิ่มเพลงใน Playlist แล้ว","success");
+        } else if(action==="playlist-open") {
+          const p=(await api("libraryGet")).playlists.find(item=>item.id===value);
+          if(!p) throw new Error("ไม่พบ Playlist"); await openPlaylist(value,p.name); setStatus(`เปิด ${p.name} แล้ว`,`success`);
+        } else if(action==="playlist-rename") {
+          const name=prompt("ชื่อ Playlist ใหม่",button.dataset.name || "");
+          if(name===null) return; await api("playlistRename",{playlist_id:value,name}); await loadLibrary(); setStatus("เปลี่ยนชื่อ Playlist แล้ว","success");
+        } else if(action==="playlist-delete") {
+          if(!confirm(`ยืนยันลบ Playlist “${button.dataset.name}” และเพลงภายในทั้งหมด?`)) return;
+          await api("playlistDelete",{playlist_id:value}); if(selectedPlaylistId===value) selectedPlaylistId=""; await loadLibrary(); setStatus("ลบ Playlist แล้ว","success");
+        } else if(action==="playlist-track-remove") {
+          await api("playlistRemoveSong",{playlist_id:button.dataset.playlistId,playlist_song_id:value}); await loadLibrary(); setStatus("นำเพลงออกจาก Playlist แล้ว","success");
+        }
+      } catch(error) { setStatus(error.message,"error"); }
+      finally { button.disabled=false; }
+    });
+
+    $("reload-btn").addEventListener("click",loadLibrary);
+    $("new-session-btn").addEventListener("click",()=>{ localStorage.removeItem("ymq_session_token"); token=""; selectedPlaylistId=""; showSession("กรอกชื่อเพื่อเริ่ม Session ใหม่"); });
+
+    if(!ready) showSession("กรุณาตั้งค่า assets/config.js ก่อนใช้งาน");
+    else if(token) await loadLibrary();
+  </script>
+</body>
+</html>
