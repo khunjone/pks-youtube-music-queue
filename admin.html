@@ -17,6 +17,7 @@
     <div class="actions" style="margin:0">
       <a href="./library.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">คลังเพลง</a>
       <a href="./analytics.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">รายงานสถิติ</a>
+      <a href="#appearance-panel" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">ธีม/กิจกรรม</a>
       <span id="role-label" class="muted" style="color:#d1ddec"></span>
       <button id="refresh-btn" class="secondary hidden">รีเฟรชข้อมูล</button>
       <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
@@ -73,6 +74,40 @@
           <div class="actions"><button type="submit" id="save-settings">บันทึกการตั้งค่า</button></div>
         </form>
         <p class="muted">การปิดรับคำขอจะป้องกันทั้ง Session ใหม่และการเพิ่มเพลงจาก Session เดิม ส่วนการปิดโหวตจะป้องกันการโหวตและการยกเลิกโหวต</p>
+      </section>
+
+      <section class="panel" id="appearance-panel">
+        <h2>รูปแบบห้องเพลงและกิจกรรม</h2>
+        <p class="muted">เลือกธีมและรูปแบบกิจกรรม พร้อมตั้งชื่อกิจกรรมและข้อความต้อนรับที่จะแสดงบนหน้าห้องเพลง คลังเพลง และ Player</p>
+        <form id="appearance-form">
+          <div class="two">
+            <label class="field">รูปแบบกิจกรรม
+              <select id="appearance-mode">
+                <option value="STANDARD">ห้องเพลงทั่วไป</option>
+                <option value="SCHOOL">กิจกรรมโรงเรียน</option>
+                <option value="PARTY">งานเลี้ยง / ปาร์ตี้</option>
+                <option value="CELEBRATION">งานเฉลิมฉลอง</option>
+              </select>
+            </label>
+            <label class="field">ธีมสี
+              <select id="appearance-theme">
+                <option value="BLUE">น้ำเงินคลาสสิก</option>
+                <option value="VIOLET">ม่วง</option>
+                <option value="ROSE">ชมพู</option>
+                <option value="GREEN">เขียว</option>
+              </select>
+            </label>
+          </div>
+          <label class="field">ชื่อกิจกรรม (ไม่บังคับ)<input id="event-name" type="text" maxlength="60" placeholder="เช่น งานเลี้ยงปีใหม่ 2569"></label>
+          <label class="field">หัวข้อข้อความต้อนรับ<input id="welcome-title" type="text" maxlength="60" placeholder="เช่น ยินดีต้อนรับสู่ห้องเพลง"></label>
+          <label class="field">ข้อความต้อนรับ / ประกาศ<textarea id="welcome-message" maxlength="180" rows="3" style="display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white;resize:vertical" placeholder="พิมพ์ข้อความที่ต้องการให้ทุกคนเห็น (ไม่เกิน 180 ตัวอักษร)"></textarea></label>
+          <div class="checks">
+            <label class="check"><input id="appearance-enabled" type="checkbox"> เปิดใช้ธีมกิจกรรม</label>
+            <label class="check"><input id="banner-enabled" type="checkbox"> แสดงแถบข้อความต้อนรับ</label>
+          </div>
+          <div class="actions"><button type="submit" id="save-appearance">บันทึกรูปแบบห้องเพลง</button></div>
+        </form>
+        <p class="muted">การเปลี่ยนแปลงจะมีผลกับหน้าสาธารณะหลังรีเฟรชหน้าเว็บ ไม่มีการเปลี่ยนคิวเพลงหรือสถานะ Player</p>
       </section>
 
       <section class="panel">
@@ -146,7 +181,7 @@
       $("logout-btn").classList.remove("hidden");
       $("refresh-btn").classList.remove("hidden");
       $("role-label").textContent = role === "ADMIN" ? "สิทธิ์ ADMIN" : "สิทธิ์ MODERATOR";
-      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel"]) {
+      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel", "appearance-panel"]) {
         $(id).classList.toggle("hidden", role !== "ADMIN");
       }
     }
@@ -169,6 +204,7 @@
         $("stat-errors").textContent = s.errors;
         $("player-state").textContent = `Player: ${overview.player?.status || "ไม่ทราบสถานะ"}`;
         renderSettings(overview.settings || {});
+        renderAppearance(overview.settings?.room_appearance || {});
         renderQueue(queue.songs || []);
         renderHistory(history.history || []);
         if (overview.role === "ADMIN") {
@@ -212,6 +248,16 @@
       $("accept-requests").checked = s.accept_requests !== false;
       $("vote-enabled").checked = s.vote_enabled !== false;
       $("allow-unvote").checked = s.allow_unvote !== false;
+    }
+
+    function renderAppearance(a) {
+      $("appearance-mode").value = ["STANDARD", "SCHOOL", "PARTY", "CELEBRATION"].includes(a.mode) ? a.mode : "STANDARD";
+      $("appearance-theme").value = ["BLUE", "VIOLET", "ROSE", "GREEN"].includes(a.theme) ? a.theme : "BLUE";
+      $("event-name").value = a.event_name || "";
+      $("welcome-title").value = a.welcome_title || "";
+      $("welcome-message").value = a.welcome_message || "";
+      $("appearance-enabled").checked = a.enabled !== false;
+      $("banner-enabled").checked = a.show_banner !== false;
     }
 
     function renderQueue(songs) {
@@ -287,6 +333,26 @@
         }});
         say("บันทึกการตั้งค่าเรียบร้อย", true);
         await loadAll();
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("appearance-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("save-appearance"); button.disabled = true;
+      try {
+        const result = await api("adminSaveAppearance", { appearance: {
+          enabled: $("appearance-enabled").checked,
+          show_banner: $("banner-enabled").checked,
+          mode: $("appearance-mode").value,
+          theme: $("appearance-theme").value,
+          event_name: $("event-name").value,
+          welcome_title: $("welcome-title").value,
+          welcome_message: $("welcome-message").value,
+        }});
+        renderAppearance(result.appearance || {});
+        say("บันทึกรูปแบบห้องเพลงเรียบร้อย", true);
+        if (typeof window.refreshRoomTheme === "function") await window.refreshRoomTheme();
       } catch (error) { say(error.message); }
       finally { button.disabled = false; }
     });
@@ -370,5 +436,6 @@
       if (session) await loadAll();
     }
   </script>
+  <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>
