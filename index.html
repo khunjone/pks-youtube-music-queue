@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <header><h1>♫ Music Room</h1><span id="connection">กำลังเชื่อมต่อ…</span><a href="./library.html" style="color:#fff;text-decoration:none;border:1px solid #a9bfd8;border-radius:8px;padding:7px 10px;font-size:13px">คลังเพลง</a></header>
+  <header><h1>♫ Music Room</h1><span id="connection">กำลังเชื่อมต่อ…</span><a id="library-link" href="./library.html?room=one" style="color:#fff;text-decoration:none;border:1px solid #a9bfd8;border-radius:8px;padding:7px 10px;font-size:13px">คลังเพลง</a><a href="./rooms.html" style="color:#fff;text-decoration:none;border:1px solid #a9bfd8;border-radius:8px;padding:7px 10px;font-size:13px">เลือกห้อง</a></header>
   <main>
     <section id="session-panel" class="panel">
       <h2>เริ่มใช้งาน</h2>
@@ -30,6 +30,7 @@
     <p id="notice" role="status"></p>
   </main>
   <script type="module" src="assets/app.js"></script>
+  <script type="module">const room=encodeURIComponent(new URLSearchParams(location.search).get("room")||"one");document.getElementById("library-link")?.setAttribute("href",`./library.html?room=${room}`);</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>

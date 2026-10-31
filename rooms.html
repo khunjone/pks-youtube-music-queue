@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>YouTube Music Queue — เลือกห้องเพลง</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#182437;background:#f3f6fb}
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:white;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}main{width:min(980px,94vw);margin:28px auto 55px}.intro,.room-card{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;box-shadow:0 6px 20px #1b31500b}.intro{margin-bottom:18px}.intro p,.muted{color:#68788e;font-size:13px;line-height:1.6}.rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:13px}.room-card h2{font-size:18px;margin:0 0 5px;overflow-wrap:anywhere}.slug{font-size:12px;color:#718198;margin-bottom:14px}.actions{display:flex;gap:8px;flex-wrap:wrap}a.button{display:inline-flex;text-decoration:none;border-radius:8px;padding:9px 13px;font:600 13px system-ui;background:#1d568d;color:white}a.button.secondary{background:#e8eef6;color:#27425f}.empty,.status{padding:16px;text-align:center;color:#718198}.footer{text-align:center;color:#8390a2;font-size:12px;margin:28px 0}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>♫ เลือกห้องเพลง</h1>
+    <a class="button secondary" href="./admin.html?room=one">ผู้ดูแลระบบ</a>
+  </header>
+  <main>
+    <section class="intro">
+      <h2 style="margin:0 0 8px;font-size:19px">ห้องเพลงที่เปิดให้ใช้งาน</h2>
+      <p style="margin:0">เลือกห้องที่ต้องการเข้าร่วม แต่ละห้องมีคิวเพลง การโหวต Player คลังเพลง และธีมกิจกรรมแยกจากกัน</p>
+    </section>
+    <section id="rooms" class="rooms"><div class="empty">กำลังโหลดรายการห้องเพลง…</div></section>
+    <p id="status" class="status" role="status"></p>
+    <p class="footer">YouTube Music Queue Manager • Multi-Room</p>
+  </main>
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
+    const root = document.getElementById("rooms");
+    const status = document.getElementById("status");
+    function link(file, slug) { return `./${file}?room=${encodeURIComponent(slug)}`; }
+    async function loadRooms() {
+      try {
+        if (!SUPABASE_URL?.startsWith("https://") || !SUPABASE_PUBLISHABLE_KEY) throw new Error("กรุณาตรวจสอบ assets/config.js");
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
+          method: "POST", headers: { "Content-Type":"application/json", "apikey":SUPABASE_PUBLISHABLE_KEY },
+          body: JSON.stringify({ action:"listRooms" }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        root.replaceChildren();
+        for (const room of result.rooms || []) {
+          const card = document.createElement("article"); card.className = "room-card";
+          const title = document.createElement("h2"); title.textContent = room.name;
+          const slug = document.createElement("div"); slug.className = "slug"; slug.textContent = `Room: ${room.slug}`;
+          const actions = document.createElement("div"); actions.className = "actions";
+          const join = document.createElement("a"); join.className = "button"; join.href = link("index.html", room.slug); join.textContent = "เข้าห้องเพลง";
+          const player = document.createElement("a"); player.className = "button secondary"; player.href = link("player.html", room.slug); player.textContent = "หน้า Player";
+          actions.append(join, player); card.append(title, slug, actions); root.append(card);
+        }
+        if (!result.rooms?.length) root.innerHTML = '<div class="empty">ยังไม่มีห้องเพลงที่เปิดใช้งาน</div>';
+      } catch (error) {
+        root.innerHTML = '<div class="empty">ไม่สามารถโหลดรายการห้องเพลงได้</div>';
+        status.textContent = error.message;
+      }
+    }
+    loadRooms();
+  </script>
+</body>
+</html>

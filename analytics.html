@@ -15,7 +15,8 @@
   <header>
     <h1>♫ Music Room — Analytics</h1>
     <div class="actions">
-      <a class="linkbtn secondary" href="./admin.html">กลับหน้า Admin</a>
+      <a class="linkbtn secondary" href="./rooms.html">เลือกห้อง</a>
+      <a class="linkbtn secondary" href="./admin.html?room=one" id="admin-link">กลับหน้า Admin</a>
       <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
     </div>
   </header>
@@ -101,6 +102,7 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
+    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
     const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") &&
       typeof SUPABASE_PUBLISHABLE_KEY === "string" && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
     const client = ready ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
@@ -115,7 +117,7 @@
       const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
         method: "POST",
         headers: { "Content-Type":"application/json", "apikey":SUPABASE_PUBLISHABLE_KEY, "Authorization":`Bearer ${session.access_token}` },
-        body: JSON.stringify({ action, ...data }),
+        body: JSON.stringify({ action, room_slug: ROOM_SLUG, ...data }),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
@@ -242,6 +244,7 @@
       if (session) await loadReport();
     }
   </script>
+  <script type="module">const room=encodeURIComponent(new URLSearchParams(location.search).get("room")||"one");document.getElementById("admin-link")?.setAttribute("href",`./admin.html?room=${room}`);</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>

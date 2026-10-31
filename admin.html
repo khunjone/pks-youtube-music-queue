@@ -15,8 +15,9 @@
   <header>
     <h1>♫ Music Room — Admin</h1>
     <div class="actions" style="margin:0">
-      <a href="./library.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">คลังเพลง</a>
-      <a href="./analytics.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">รายงานสถิติ</a>
+      <a href="./rooms.html" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">เลือกห้อง</a>
+      <a href="./library.html?room=one" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">คลังเพลง</a>
+      <a href="./analytics.html?room=one" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">รายงานสถิติ</a>
       <a href="#appearance-panel" class="secondary" style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 14px;font:600 14px system-ui">ธีม/กิจกรรม</a>
       <span id="role-label" class="muted" style="color:#d1ddec"></span>
       <button id="refresh-btn" class="secondary hidden">รีเฟรชข้อมูล</button>
@@ -48,6 +49,24 @@
           <div class="stat"><span>นำออกจากคิว</span><strong id="stat-removed">—</strong></div>
           <div class="stat"><span>เล่นไม่สำเร็จ</span><strong id="stat-errors">—</strong></div>
         </div>
+      </section>
+
+      <section class="panel" id="rooms-panel">
+        <div class="section-head"><div><h2 style="margin-bottom:4px">จัดการหลายห้องเพลง</h2><p class="muted" style="margin:0">เลือกห้องที่ต้องการจัดการ หรือสร้างห้องใหม่ ห้องหลัก one จะคงไว้เพื่อรองรับระบบเดิม</p></div><span class="tag" id="current-room-label">ห้อง: one</span></div>
+        <div class="two" style="margin-top:14px">
+          <div>
+            <label class="field">เลือกห้องที่ต้องการจัดการ<select id="active-room-select" style="display:block;width:100%;margin-top:6px;padding:11px;border:1px solid #ccd6e3;border-radius:8px;background:#fff;font:inherit;color:#182437"></select></label>
+            <button type="button" class="secondary" id="open-room-btn">เปิดหน้าจัดการห้องนี้</button>
+          </div>
+          <form id="room-create-form">
+            <label class="field">ชื่อห้องเพลง<input id="new-room-name" type="text" maxlength="80" required placeholder="เช่น ห้องเพลงงานกีฬาสี"></label>
+            <label class="field">Room Slug (อังกฤษ ตัวเลข และ -)<input id="new-room-slug" type="text" maxlength="40" pattern="[a-z0-9][a-z0-9-]{1,38}[a-z0-9]" required placeholder="เช่น sports-day"></label>
+            <button id="create-room-btn" type="submit">สร้างห้องเพลง</button>
+            <p class="muted">Room Slug ใช้ใน URL และควรไม่ซ้ำกัน สร้างได้สูงสุด 50 ห้อง</p>
+          </form>
+        </div>
+        <h3 style="font-size:15px;margin:18px 0 8px">รายการห้องเพลง</h3>
+        <div id="rooms-list" class="list"><div class="empty">กำลังโหลดรายการห้อง…</div></div>
       </section>
 
       <section class="panel">
@@ -149,6 +168,7 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
+    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
     const ready = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
     const client = ready ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
     let currentRole = "";
@@ -167,7 +187,7 @@
           "apikey": SUPABASE_PUBLISHABLE_KEY,
           "Authorization": `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ action, ...data }),
+        body: JSON.stringify({ action, room_slug: ROOM_SLUG, ...data }),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
@@ -186,6 +206,60 @@
       }
     }
 
+    function pageUrl(file, slug = ROOM_SLUG) { return `./${file}?room=${encodeURIComponent(slug)}`; }
+
+    async function loadRooms() {
+      const result = await api("adminListRooms");
+      const select = $("active-room-select");
+      select.replaceChildren();
+      const list = $("rooms-list"); list.replaceChildren();
+      for (const room of result.rooms || []) {
+        const option = document.createElement("option"); option.value = room.slug;
+        option.textContent = `${room.name} (${room.slug})${room.enabled ? "" : " — ปิดใช้งาน"}`;
+        select.append(option);
+
+        const row = document.createElement("div"); row.className = "item";
+        const main = document.createElement("div"); main.className = "item-main";
+        const title = document.createElement("div"); title.className = "item-title"; title.textContent = room.name;
+        const meta = document.createElement("div"); meta.className = "item-meta"; meta.textContent = `/${room.slug} · ${room.enabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}`;
+        main.append(title, meta);
+        const controls = document.createElement("div"); controls.className = "actions";
+        const open = document.createElement("button"); open.className = "secondary small-btn"; open.textContent = "จัดการห้อง";
+        open.addEventListener("click", () => location.href = pageUrl("admin.html", room.slug));
+        controls.append(open);
+        if (currentRole === "ADMIN" && room.slug !== "one") {
+          const toggle = document.createElement("button"); toggle.className = room.enabled ? "danger small-btn" : "small-btn";
+          toggle.textContent = room.enabled ? "ปิดห้อง" : "เปิดห้อง";
+          toggle.addEventListener("click", async () => {
+            toggle.disabled = true;
+            try {
+              await api("adminUpdateRoom", { room_id: room.id, enabled: !room.enabled });
+              await loadRooms(); say(`ปรับสถานะห้อง ${room.name} แล้ว`, true);
+            } catch (error) { say(error.message); toggle.disabled = false; }
+          });
+          controls.append(toggle);
+        }
+        row.append(main, controls); list.append(row);
+      }
+      select.value = ROOM_SLUG;
+      if (!result.rooms?.length) list.innerHTML = '<div class="empty">ยังไม่มีห้องเพลง</div>';
+      $("current-room-label").textContent = `กำลังจัดการ: ${result.rooms?.find(r => r.slug === ROOM_SLUG)?.name || ROOM_SLUG}`;
+      $("room-create-form").classList.toggle("hidden", currentRole !== "ADMIN");
+    }
+
+    $("open-room-btn").addEventListener("click", () => {
+      location.href = pageUrl("admin.html", $("active-room-select").value || "one");
+    });
+    $("room-create-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("create-room-btn"); button.disabled = true;
+      try {
+        const result = await api("adminCreateRoom", { name: $("new-room-name").value.trim(), slug: $("new-room-slug").value.trim().toLowerCase() });
+        say(`สร้างห้อง ${result.room.name} สำเร็จ กำลังเปิดห้องใหม่…`, true);
+        location.href = pageUrl("admin.html", result.room.slug);
+      } catch (error) { say(error.message); button.disabled = false; }
+    });
+
     async function loadAll() {
       say("กำลังโหลดข้อมูลผู้ดูแล…");
       try {
@@ -193,6 +267,7 @@
           api("adminOverview"), api("adminGetQueue"), api("adminGetHistory"),
         ]);
         showAdmin(overview.role);
+        await loadRooms();
         const s = overview.stats;
         $("stat-waiting").textContent = s.waiting;
         $("stat-playing").textContent = s.playing;
@@ -436,6 +511,7 @@
       if (session) await loadAll();
     }
   </script>
+  <script type="module">const room=(new URLSearchParams(location.search).get("room")||"one");for(const a of document.querySelectorAll('a[href*="?room=one"]'))a.href=a.href.replace(/room=one$/,`room=${encodeURIComponent(room)}`);</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>

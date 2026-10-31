@@ -15,8 +15,9 @@
   <header>
     <h1>♫ Music Room — คลังเพลง</h1>
     <div class="actions">
-      <a class="linkbtn secondary" href="./index.html">กลับหน้าห้องเพลง</a>
-      <a class="linkbtn secondary" href="./admin.html">Admin</a>
+      <a class="linkbtn secondary" href="./index.html?room=one">กลับหน้าห้องเพลง</a>
+      <a class="linkbtn secondary" href="./admin.html?room=one">Admin</a>
+      <a class="linkbtn secondary" href="./rooms.html">เลือกห้อง</a>
     </div>
   </header>
   <main>
@@ -82,9 +83,11 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
+    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+    const TOKEN_KEY = `ymq_session_token_${ROOM_SLUG}`;
     const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") &&
       typeof SUPABASE_PUBLISHABLE_KEY === "string" && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
-    let token = localStorage.getItem("ymq_session_token") || "";
+    let token = localStorage.getItem(TOKEN_KEY) || (ROOM_SLUG === "one" ? localStorage.getItem("ymq_session_token") : "");
     let selectedPlaylistId = "";
     let selectedPlaylistName = "";
 
@@ -94,7 +97,7 @@
       const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
         method: "POST",
         headers: { "Content-Type":"application/json", "apikey":SUPABASE_PUBLISHABLE_KEY, ...(token ? {"x-session-token":token} : {}) },
-        body: JSON.stringify({ action, ...data }),
+        body: JSON.stringify({ action, room_slug: ROOM_SLUG, ...data }),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
@@ -188,7 +191,7 @@
         setStatus("โหลดคลังเพลงเรียบร้อย", "success");
       } catch (error) {
         if (/Session หมดอายุ|เริ่มใช้งานด้วยชื่อผู้ส่ง/.test(error.message)) {
-          localStorage.removeItem("ymq_session_token"); token=""; showSession("Session หมดอายุ กรุณาเริ่มใช้งานใหม่");
+          localStorage.removeItem(TOKEN_KEY); if(ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token"); token=""; showSession("Session หมดอายุ กรุณาเริ่มใช้งานใหม่");
         } else setStatus(error.message,"error");
       }
     }
@@ -215,7 +218,7 @@
       const button=$("start-session"); button.disabled=true;
       try {
         const result=await api("createSession",{display_name:$("display-name").value.trim()});
-        token=result.session_token; localStorage.setItem("ymq_session_token",token); selectedPlaylistId="";
+        token=result.session_token; localStorage.setItem(TOKEN_KEY,token); if(ROOM_SLUG === "one") localStorage.setItem("ymq_session_token",token); selectedPlaylistId="";
         await loadLibrary();
       } catch(error) { $("session-status").textContent=error.message; $("session-status").className="status error"; }
       finally { button.disabled=false; }
@@ -265,11 +268,12 @@
     });
 
     $("reload-btn").addEventListener("click",loadLibrary);
-    $("new-session-btn").addEventListener("click",()=>{ localStorage.removeItem("ymq_session_token"); token=""; selectedPlaylistId=""; showSession("กรอกชื่อเพื่อเริ่ม Session ใหม่"); });
+    $("new-session-btn").addEventListener("click",()=>{ localStorage.removeItem(TOKEN_KEY); if(ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token"); token=""; selectedPlaylistId=""; showSession("กรอกชื่อเพื่อเริ่ม Session ใหม่"); });
 
     if(!ready) showSession("กรุณาตั้งค่า assets/config.js ก่อนใช้งาน");
     else if(token) await loadLibrary();
   </script>
+  <script type="module">const q=new URLSearchParams(location.search);const r=encodeURIComponent(q.get("room")||"one");document.querySelectorAll('a[href$="?room=one"]').forEach(a=>a.href=a.href.replace(/room=one$/,`room=${r}`));</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>
