@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Music Room — Analytics</title>
+  <style>
+    :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:22px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 14px;font-size:18px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.error{color:#b42332}.success{color:#157347}.hidden{display:none!important}.login{max-width:440px;margin:8vh auto}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}button,.linkbtn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white;text-decoration:none}button.secondary,.linkbtn.secondary{background:#e8eef6;color:#27425f}button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.toolbar label{min-width:150px}.toolbar select{display:block;margin-top:6px;padding:10px 12px;border:1px solid #ccd6e3;border-radius:8px;background:white;font:inherit;color:#182437}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.chart{display:grid;gap:7px}.chart-row{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;font-size:12px;color:#617187}.bar-area{height:32px;background:transparent;border-radius:6px;overflow:hidden;display:grid;grid-template-rows:1fr 1fr;gap:2px}.bar{min-width:0;max-width:100%;border-radius:4px;justify-self:start}.bar.requests{background:#3b82b9}.bar.plays{background:#6e9b78}.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 14px;font-size:12px;color:#617187}.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}.dot.req{background:#3b82b9}.dot.play{background:#6e9b78}.table-wrap{overflow:auto;max-height:440px}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:10px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.num{text-align:right!important;font-variant-numeric:tabular-nums}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.notice{font-size:12px;color:#8a5a12;background:#fff8e8;border:1px solid #f2dfb4;border-radius:8px;padding:10px;margin-top:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
+    @media(max-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.panel{padding:15px}.chart-row{grid-template-columns:58px 1fr}.stat strong{font-size:23px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>♫ Music Room — Analytics</h1>
+    <div class="actions">
+      <a class="linkbtn secondary" href="./admin.html">กลับหน้า Admin</a>
+      <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
+    </div>
+  </header>
+  <main>
+    <section id="login-panel" class="panel login">
+      <h2>เข้าสู่ระบบเพื่อดูรายงาน</h2>
+      <p class="muted">ใช้บัญชี ADMIN หรือ MODERATOR ที่ได้รับสิทธิ์ในระบบเดิม</p>
+      <form id="login-form">
+        <label class="field">อีเมล<input id="email" type="email" autocomplete="username" required></label>
+        <label class="field">รหัสผ่าน<input id="password" type="password" autocomplete="current-password" required></label>
+        <button id="login-btn" type="submit" style="width:100%">เข้าสู่ระบบ</button>
+      </form>
+      <p id="login-status" class="status" role="status"></p>
+    </section>
+
+    <section id="report-panel" class="hidden">
+      <section class="panel">
+        <div class="toolbar">
+          <label class="field">ช่วงเวลารายงาน
+            <select id="days">
+              <option value="7">7 วันล่าสุด</option>
+              <option value="30" selected>30 วันล่าสุด</option>
+              <option value="90">90 วันล่าสุด</option>
+            </select>
+          </label>
+          <div class="actions">
+            <button id="refresh-btn">แสดงรายงาน</button>
+            <button id="csv-btn" class="secondary" disabled>ส่งออก CSV</button>
+          </div>
+          <span id="role-label" class="muted"></span>
+        </div>
+        <p id="report-status" class="status" role="status">เลือกช่วงเวลาแล้วกดแสดงรายงาน</p>
+      </section>
+
+      <section class="panel">
+        <h2>ภาพรวมการใช้งาน</h2>
+        <div class="grid">
+          <div class="stat"><span>เพิ่มเพลงทั้งหมด</span><strong id="stat-requests">—</strong></div>
+          <div class="stat"><span>เปิดเพลงทั้งหมด</span><strong id="stat-plays">—</strong></div>
+          <div class="stat"><span>เล่นจบตามปกติ</span><strong id="stat-completed">—</strong></div>
+          <div class="stat"><span>ผู้ส่งเพลงไม่ซ้ำ</span><strong id="stat-users">—</strong></div>
+          <div class="stat"><span>ข้ามเพลง</span><strong id="stat-skipped">—</strong></div>
+          <div class="stat"><span>เล่นไม่สำเร็จ</span><strong id="stat-errors">—</strong></div>
+          <div class="stat"><span>คะแนนโหวตของเพลงที่เล่น</span><strong id="stat-votes">—</strong></div>
+          <div class="stat"><span>วันที่รายงาน</span><strong id="stat-period" style="font-size:16px">—</strong></div>
+        </div>
+        <p id="truncation-note" class="notice hidden">ข้อมูลในช่วงเวลานี้มีจำนวนมากกว่าขีดจำกัดการอ่านรายงาน ระบบจะแสดงข้อมูลสูงสุด 10,000 รายการต่อประเภท ควรเลือกช่วงเวลาสั้นลงเพื่อดูข้อมูลครบถ้วน</p>
+      </section>
+
+      <section class="panel">
+        <h2>แนวโน้มรายวัน</h2>
+        <div class="chart-legend"><span><i class="dot req"></i>เพิ่มเพลง</span><span><i class="dot play"></i>เปิดเพลง</span></div>
+        <div id="daily-chart" class="chart"><div class="empty">กำลังรอข้อมูลรายงาน</div></div>
+      </section>
+
+      <div class="two">
+        <section class="panel">
+          <h2>เพลงที่เปิดบ่อยที่สุด</h2>
+          <div class="table-wrap"><table class="table"><thead><tr><th>เพลง</th><th class="num">ครั้งที่เปิด</th><th class="num">คะแนนรวม</th></tr></thead><tbody id="top-songs"><tr><td colspan="3" class="muted">ยังไม่มีข้อมูล</td></tr></tbody></table></div>
+        </section>
+        <section class="panel">
+          <h2>ผู้ส่งเพลงมากที่สุด</h2>
+          <div class="table-wrap"><table class="table"><thead><tr><th>ชื่อผู้ส่ง</th><th class="num">เพิ่มเพลง</th><th class="num">เปิดเพลง</th></tr></thead><tbody id="top-submitters"><tr><td colspan="3" class="muted">ยังไม่มีข้อมูล</td></tr></tbody></table></div>
+        </section>
+      </div>
+      <section class="panel">
+        <h2>สถานะของเพลงที่เพิ่มในช่วงเวลา</h2>
+        <div class="grid" id="status-grid">
+          <div class="stat"><span>รอเล่น</span><strong id="status-waiting">0</strong></div>
+          <div class="stat"><span>กำลังเล่น</span><strong id="status-playing">0</strong></div>
+          <div class="stat"><span>เล่นแล้ว</span><strong id="status-played">0</strong></div>
+          <div class="stat"><span>ข้าม</span><strong id="status-skipped">0</strong></div>
+          <div class="stat"><span>นำออก</span><strong id="status-removed">0</strong></div>
+          <div class="stat"><span>ผิดพลาด</span><strong id="status-error">0</strong></div>
+        </div>
+      </section>
+    </section>
+    <p class="footer">YouTube Music Queue Manager • Analytics • Asia/Bangkok</p>
+  </main>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
+
+    const $ = (id) => document.getElementById(id);
+    const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") &&
+      typeof SUPABASE_PUBLISHABLE_KEY === "string" && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
+    const client = ready ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
+    let latestReport = null;
+    const number = (value) => Number(value || 0).toLocaleString("th-TH");
+    const dateText = (value) => value ? new Date(value).toLocaleDateString("th-TH", { day:"numeric", month:"short" }) : "—";
+    const setStatus = (target, message, kind = "") => { $(target).textContent = message || ""; $(target).className = `status ${kind}`; };
+
+    async function api(action, data = {}) {
+      const { data: { session } } = await client.auth.getSession();
+      if (!session?.access_token) throw new Error("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "apikey":SUPABASE_PUBLISHABLE_KEY, "Authorization":`Bearer ${session.access_token}` },
+        body: JSON.stringify({ action, ...data }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      return result;
+    }
+
+    function drawDaily(rows) {
+      const root = $("daily-chart");
+      root.replaceChildren();
+      const maxValue = Math.max(1, ...rows.map(row => Math.max(row.requests, row.plays)));
+      for (const row of rows) {
+        const line = document.createElement("div"); line.className = "chart-row";
+        const label = document.createElement("span"); label.textContent = dateText(`${row.date}T12:00:00+07:00`);
+        const area = document.createElement("div"); area.className = "bar-area";
+        const req = document.createElement("div"); req.className = "bar requests";
+        req.style.width = `${row.requests / maxValue * 100}%`; req.title = `เพิ่มเพลง ${number(row.requests)} รายการ`;
+        const play = document.createElement("div"); play.className = "bar plays";
+        play.style.width = `${row.plays / maxValue * 100}%`; play.title = `เปิดเพลง ${number(row.plays)} ครั้ง`;
+        area.append(req, play); line.append(label, area); root.append(line);
+      }
+      if (!rows.length) root.innerHTML = '<div class="empty">ไม่มีข้อมูลในช่วงเวลานี้</div>';
+    }
+
+    function drawTable(bodyId, rows, columns, emptyText) {
+      const body = $(bodyId); body.replaceChildren();
+      if (!rows.length) { const tr=document.createElement("tr"), td=document.createElement("td"); td.colSpan=columns.length; td.className="muted"; td.textContent=emptyText; tr.append(td); body.append(tr); return; }
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        for (const column of columns) {
+          const td = document.createElement("td"); td.textContent = column.value(row);
+          if (column.numeric) td.className = "num";
+          tr.append(td);
+        }
+        body.append(tr);
+      }
+    }
+
+    function render(report) {
+      latestReport = report;
+      const s = report.summary;
+      $("stat-requests").textContent = number(s.requests);
+      $("stat-plays").textContent = number(s.plays);
+      $("stat-completed").textContent = number(s.completed);
+      $("stat-users").textContent = number(s.unique_submitters);
+      $("stat-skipped").textContent = number(s.skipped);
+      $("stat-errors").textContent = number(s.errors);
+      $("stat-votes").textContent = number(s.votes_on_played_songs);
+      $("stat-period").textContent = `${report.period.from} ถึง ${report.period.to}`;
+      const status = s.status_counts || {};
+      for (const [key, id] of [["WAITING","waiting"],["PLAYING","playing"],["PLAYED","played"],["SKIPPED","skipped"],["REMOVED","removed"],["ERROR","error"]]) {
+        $(`status-${id}`).textContent = number(status[key]);
+      }
+      drawDaily(report.daily || []);
+      drawTable("top-songs", report.top_songs || [], [
+        { value: row => row.title }, { value: row => number(row.plays), numeric: true }, { value: row => number(row.votes), numeric: true },
+      ], "ยังไม่มีประวัติการเปิดเพลง");
+      drawTable("top-submitters", report.top_submitters || [], [
+        { value: row => row.name }, { value: row => number(row.requests), numeric: true }, { value: row => number(row.plays), numeric: true },
+      ], "ยังไม่มีข้อมูลผู้ส่งเพลง");
+      $("truncation-note").classList.toggle("hidden", !(s.requests_truncated || s.history_truncated));
+      $("csv-btn").disabled = false;
+      setStatus("report-status", `อัปเดตข้อมูลแล้ว • ${new Date(report.generated_at).toLocaleString("th-TH")}`, "success");
+    }
+
+    async function loadReport() {
+      const button = $("refresh-btn"); button.disabled = true;
+      setStatus("report-status", "กำลังประมวลผลรายงาน…");
+      try {
+        const report = await api("adminAnalytics", { days: Number($("days").value) });
+        $("role-label").textContent = `สิทธิ์ ${report.role}`;
+        $("report-panel").classList.remove("hidden");
+        $("login-panel").classList.add("hidden");
+        $("logout-btn").classList.remove("hidden");
+        render(report);
+      } catch (error) {
+        setStatus("report-status", error.message, "error");
+        if (/สิทธิ์|เซสชันผู้ดูแล|เข้าสู่ระบบ|หมดอายุ/.test(error.message)) {
+          setStatus("login-status", error.message, "error");
+          $("report-panel").classList.add("hidden");
+          $("login-panel").classList.remove("hidden");
+          $("logout-btn").classList.add("hidden");
+        } else if ($("report-panel").classList.contains("hidden")) {
+          setStatus("login-status", error.message, "error");
+        }
+      } finally { button.disabled = false; }
+    }
+
+    function csvCell(value) { return `"${String(value ?? "").replaceAll('"', '""')}"`; }
+    function exportCsv() {
+      if (!latestReport) return;
+      const rows = [["ประเภท","รายการ","จำนวน","รายละเอียด"]];
+      for (const day of latestReport.daily) rows.push(["รายวัน", day.date, day.requests, `เปิดเพลง ${day.plays} ครั้ง`]);
+      for (const song of latestReport.top_songs) rows.push(["เพลงยอดนิยม", song.title, song.plays, `คะแนนรวม ${song.votes}; Video ID ${song.video_id}`]);
+      for (const person of latestReport.top_submitters) rows.push(["ผู้ส่งเพลง", person.name, person.requests, `เปิดเพลง ${person.plays} ครั้ง`]);
+      const csv = "\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n");
+      const url = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" }));
+      const link = document.createElement("a"); link.href = url; link.download = `music-room-report-${latestReport.period.from}-to-${latestReport.period.to}.csv`;
+      document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    }
+
+    $("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault(); const button = $("login-btn"); button.disabled = true;
+      setStatus("login-status", "กำลังเข้าสู่ระบบ…");
+      try {
+        const { error } = await client.auth.signInWithPassword({ email:$("email").value.trim(), password:$("password").value });
+        if (error) throw error;
+        await loadReport();
+      } catch (error) { setStatus("login-status", error.message, "error"); }
+      finally { button.disabled = false; }
+    });
+    $("refresh-btn").addEventListener("click", loadReport);
+    $("csv-btn").addEventListener("click", exportCsv);
+    $("logout-btn").addEventListener("click", async () => {
+      await client.auth.signOut(); latestReport = null;
+      $("report-panel").classList.add("hidden"); $("login-panel").classList.remove("hidden"); $("logout-btn").classList.add("hidden");
+      setStatus("login-status", "ออกจากระบบแล้ว", "success");
+    });
+
+    if (!ready) {
+      $("login-btn").disabled = true;
+      setStatus("login-status", "ไม่พบการตั้งค่า assets/config.js จาก Phase 2", "error");
+    } else {
+      const { data: { session } } = await client.auth.getSession();
+      if (session) await loadReport();
+    }
+  </script>
+</body>
+</html>
