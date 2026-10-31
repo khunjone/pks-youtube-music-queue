@@ -74,6 +74,10 @@
         <button id="release-btn" class="danger">ปลดการควบคุม</button>
       </div>
       <p id="player-status" class="status" role="status"></p>
+      <label class="muted" style="display:flex;align-items:center;gap:9px;margin:8px 0 0">
+        <input id="ai-dj-enabled" type="checkbox" checked style="width:auto;margin:0"> เปิด AI DJ ประกาศชื่อเพลงและข้อความฝากเพลง
+      </label>
+      <p class="muted">AI DJ ใช้เสียงภาษาไทยจากเบราว์เซอร์ โดยเริ่มประกาศพร้อมกับเสียงเพลง หากเครื่องไม่มีเสียงภาษาไทย ระบบจะใช้เสียงสำรองที่มีอยู่</p>
       <p class="muted">หมายเหตุ: เมื่อเชื่อมต่อเครื่องเล่นแล้ว หากเพลงไม่เริ่ม ให้กด “เริ่มเล่นเพลง” หรือปุ่มเล่นบน YouTube Player หนึ่งครั้ง</p>
     </section>
 
@@ -111,6 +115,16 @@
     let heartbeatTimer = null;
     let progressTimer = null;
     let idlePollTimer = null;
+    let announcingSongId = "";
+    let pendingAnnouncementSongId = "";
+    const announcedSongIds = new Set();
+    const AI_DJ_KEY = `ymq_ai_dj_enabled_${ROOM_SLUG}`;
+    const aiDjToggle = $("ai-dj-enabled");
+    aiDjToggle.checked = localStorage.getItem(AI_DJ_KEY) !== "false";
+    aiDjToggle.addEventListener("change", () => {
+      localStorage.setItem(AI_DJ_KEY, String(aiDjToggle.checked));
+      if (!aiDjToggle.checked && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    });
 
     const setConnection = (message) => { $("connection").textContent = message; };
     const showStatus = (message) => { $("player-status").textContent = message || ""; };
@@ -233,7 +247,49 @@
       }
     }
 
-    function loadPreparedSong() {
+    function buildDjAnnouncement(song) {
+      const parts = [`เพลง ${song.title || "เพลงถัดไป"}`];
+      parts.push(`จาก ${song.submitted_by || "ผู้ฝากเพลงไม่ระบุชื่อ"}`);
+      if (song.recipient) parts.push(`ฝากถึง ${String(song.recipient).replace(/\s+/g, " ").trim().slice(0, 50)}`);
+      if (song.message) parts.push(`พร้อมข้อความว่า ${String(song.message).replace(/\s+/g, " ").trim().slice(0, 200)}`);
+      parts.push("ไปฟังกันเลย...");
+      return parts.join(" ");
+    }
+
+    function speakDjAnnouncement(song) {
+      if (!aiDjToggle.checked || !("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) return;
+      if (announcedSongIds.has(song.id)) return;
+      announcedSongIds.add(song.id);
+      announcingSongId = song.id;
+      showStatus("AI DJ กำลังประกาศพร้อมกับเสียงเพลง…");
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(buildDjAnnouncement(song));
+        utterance.lang = "th-TH";
+        utterance.rate = 0.92;
+        utterance.pitch = 1.08;
+        utterance.volume = 1;
+        const voices = window.speechSynthesis.getVoices();
+        const thaiVoices = voices.filter((voice) => /^th(-|_)/i.test(voice.lang || ""));
+        const femaleVoice = thaiVoices.find((voice) => /female|woman|kanya|premwadee|narisa|pim|siri/i.test(voice.name || ""));
+        if (femaleVoice || thaiVoices[0]) utterance.voice = femaleVoice || thaiVoices[0];
+        const finish = () => {
+          if (announcingSongId === song.id) {
+            announcingSongId = "";
+            if (currentSong?.id === song.id && playerReady && player.getPlayerState() === YT.PlayerState.PLAYING) {
+              showStatus("กำลังเล่นเพลง");
+            }
+          }
+        };
+        utterance.onend = finish;
+        utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+      } catch (_) {
+        if (announcingSongId === song.id) announcingSongId = "";
+      }
+    }
+
+    async function loadPreparedSong() {
       if (!playerReady || !prepared?.song) {
         if (!currentSong) prepareNext(false);
         else player?.playVideo();
@@ -241,17 +297,24 @@
       }
       const song = prepared.song;
       const startSeconds = Math.max(0, Number(prepared.position) || 0);
+      const shouldAnnounce = !prepared.recovered && startSeconds < 3;
       prepared = null;
       currentSong = song;
-      player.loadVideoById({ videoId: song.video_id, startSeconds });
-      showStatus("กำลังส่งเพลงไปยัง YouTube Player…");
+      pendingAnnouncementSongId = shouldAnnounce ? song.id : "";
       $("play-btn").disabled = true;
+      if (!connected || currentSong?.id !== song.id) return;
+      player.loadVideoById({ videoId: song.video_id, startSeconds });
+      showStatus(shouldAnnounce ? "กำลังเริ่มเพลงและ AI DJ…" : "กำลังส่งเพลงไปยัง YouTube Player…");
     }
 
     async function handlePlayerState(event) {
       if (!currentSong || !connected) return;
       if (event.data === YT.PlayerState.PLAYING) {
         showStatus("กำลังเล่นเพลง");
+        if (pendingAnnouncementSongId === currentSong.id) {
+          pendingAnnouncementSongId = "";
+          speakDjAnnouncement(currentSong);
+        }
         $("play-btn").disabled = true;
         $("pause-btn").disabled = false;
         $("skip-btn").disabled = false;
@@ -269,6 +332,9 @@
     async function finishAndContinue(reason, autoplay) {
       if (advancing || !currentSong || !connected) return;
       advancing = true;
+      if (announcingSongId && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      announcingSongId = "";
+      pendingAnnouncementSongId = "";
       const finishedId = currentSong.id;
       try {
         const result = await api("playerFinish", {
@@ -362,6 +428,9 @@
       } catch (_) { /* The lease will expire automatically if the release request cannot reach the server. */ }
       connected = false;
       leaseToken = "";
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      announcingSongId = "";
+      pendingAnnouncementSongId = "";
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (progressTimer) clearInterval(progressTimer);
       if (idlePollTimer) clearInterval(idlePollTimer);
@@ -370,6 +439,10 @@
       $("connect-panel").hidden = false;
       $("connect-btn").disabled = false;
       $("connect-status").textContent = "ปลดการควบคุมแล้ว สามารถเชื่อมต่อใหม่ได้";
+    });
+
+    window.addEventListener("beforeunload", () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     });
 
     async function loadPublicStatus() {
