@@ -23,7 +23,6 @@
     </a>
     <nav class="header-nav" aria-label="เมนูหลัก">
       <a class="nav-link" href="./index.html?room=one">หน้าห้องเพลง</a>
-      <a class="nav-link" href="./rooms.html">เลือกห้อง</a>
       <a class="nav-link nav-link-primary" href="./admin.html?room=one">ผู้ดูแล</a>
     </nav>
   </header>
@@ -90,7 +89,7 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
-    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+    const ROOM_SLUG = "one";
     const TOKEN_KEY = `ymq_session_token_${ROOM_SLUG}`;
     const EXPIRY_KEY = `ymq_session_expiry_${ROOM_SLUG}`;
     const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") &&
@@ -319,7 +318,6 @@
     if(!ready) showSession("กรุณาตั้งค่า assets/config.js ก่อนใช้งาน");
     else if(token) await loadLibrary();
   </script>
-  <script type="module">const q=new URLSearchParams(location.search);const r=encodeURIComponent(q.get("room")||"one");document.querySelectorAll('a[href$="?room=one"]').forEach(a=>a.href=a.href.replace(/room=one$/,`room=${r}`));</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>

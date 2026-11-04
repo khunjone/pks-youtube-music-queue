@@ -22,7 +22,6 @@
       <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>รายงานและสถิติการใช้งาน</small></span>
     </a>
     <nav class="header-nav" aria-label="เมนูรายงาน">
-      <a class="nav-link" href="./rooms.html">เลือกห้อง</a>
       <a class="nav-link nav-link-primary" href="./admin.html?room=one" id="admin-link">กลับหน้า Admin</a>
       <button id="logout-btn" class="secondary hidden">ออกจากระบบ</button>
     </nav>
@@ -109,7 +108,7 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
-    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+    const ROOM_SLUG = "one";
     const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") &&
       typeof SUPABASE_PUBLISHABLE_KEY === "string" && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
     const client = ready ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
@@ -251,7 +250,6 @@
       if (session) await loadReport();
     }
   </script>
-  <script type="module">const room=encodeURIComponent(new URLSearchParams(location.search).get("room")||"one");document.getElementById("admin-link")?.setAttribute("href",`./admin.html?room=${room}`);</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>

@@ -35,7 +35,6 @@
     <nav class="header-nav" aria-label="เมนูผู้ดูแล">
       <a href="#queue-panel" class="nav-link nav-link-primary">จัดการคิวเพลง</a>
       <a href="#player-control-panel" class="nav-link">ควบคุม Player</a>
-      <a href="./rooms.html" class="nav-link">เลือกห้อง</a>
       <a href="./library.html?room=one" class="nav-link">คลังเพลง</a>
       <a href="./analytics.html?room=one" class="nav-link">รายงานสถิติ</a>
       <a href="#appearance-panel" class="nav-link">ธีม / กิจกรรม</a>
@@ -83,11 +82,12 @@
       </section>
 
       <section class="panel" id="global-schedule-panel">
-        <div class="section-head"><div><h2 style="margin-bottom:4px">ตั้งเวลาหยุดเล่นทุกห้อง</h2><p class="muted" style="margin:0">ใช้เวลาไทย (Asia/Bangkok) และมีผลกับทุก Room พร้อมกัน</p></div><span class="tag">ส่วนกลาง</span></div>
+        <div class="section-head"><div><h2 style="margin-bottom:4px">ตั้งเวลาเริ่มและหยุดเล่น</h2><p class="muted" style="margin:0">กำหนดช่วงเวลาเล่นเพลงประจำวัน ใช้เวลาไทย (Asia/Bangkok)</p></div><span class="tag">ส่วนกลาง</span></div>
         <form id="global-schedule-form" class="two">
-          <label class="check" style="align-self:end"><input id="global-schedule-enabled" type="checkbox" checked> เปิดใช้งานเวลาหยุดเล่น</label>
+          <label class="check" style="align-self:end"><input id="global-schedule-enabled" type="checkbox" checked> เปิดใช้งานตารางเวลาเล่นเพลง</label>
+          <label class="field">เริ่มเล่นเวลา<input id="global-start-time" type="time" value="11:40" required></label>
           <label class="field">หยุดเล่นเวลา<input id="global-stop-time" type="time" value="12:25" required></label>
-          <div><button type="submit" id="save-global-schedule">บันทึกเวลาหยุดเล่น</button><p class="muted">เมื่อถึงเวลาที่กำหนด Player ทุกห้องจะพักเพลงและไม่รับเพลงถัดไปจนถึงวันใหม่เวลา 00:00 น. หากต้องการเล่นต่อก่อนเที่ยงคืน ให้ปิดหรือเลื่อนเวลาหยุด และเมื่อพ้นเวลาแล้วให้สั่งเล่นต่อจาก Admin</p></div>
+          <div><button type="submit" id="save-global-schedule">บันทึกตารางเวลา</button><p class="muted">Player จะเริ่มเล่นคิวอัตโนมัติเมื่อถึงเวลาเริ่ม และหยุดเล่นเมื่อถึงเวลาหยุด โดยใช้เวลาไทย</p></div>
         </form>
       </section>
 
@@ -106,7 +106,7 @@
       </section>
 
       <section class="panel" id="rooms-panel">
-        <div class="section-head"><div><h2 style="margin-bottom:4px">จัดการหลายห้องเพลง</h2><p class="muted" style="margin:0">เลือกห้องที่ต้องการจัดการ หรือสร้างห้องใหม่ ห้องหลัก one จะคงไว้เพื่อรองรับระบบเดิม</p></div><span class="tag" id="current-room-label">ห้อง: one</span></div>
+        <div class="section-head"><div><h2 style="margin-bottom:4px">ห้องเพลงหลัก</h2><p class="muted" style="margin:0">ระบบใช้ห้องเพลงเดียวสำหรับทุกคน</p></div><span class="tag" id="current-room-label">ห้อง: one</span></div>
         <div class="two" style="margin-top:14px">
           <div>
             <label class="field">เลือกห้องที่ต้องการจัดการ<select id="active-room-select" style="display:block;width:100%;margin-top:6px;padding:11px;border:1px solid #ccd6e3;border-radius:8px;background:#fff;font:inherit;color:#182437"></select></label>
@@ -217,7 +217,7 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
-    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+    const ROOM_SLUG = "one";
     const ready = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
     const client = ready ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
     let currentRole = "";
@@ -250,64 +250,19 @@
       $("logout-btn").classList.remove("hidden");
       $("refresh-btn").classList.remove("hidden");
       $("role-label").textContent = role === "ADMIN" ? "สิทธิ์ ADMIN" : "สิทธิ์ MODERATOR";
-      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel", "appearance-panel", "global-schedule-panel"]) {
+      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel", "appearance-panel", "global-schedule-panel", "rooms-panel"]) {
         $(id).classList.toggle("hidden", role !== "ADMIN");
       }
     }
 
-    function pageUrl(file, slug = ROOM_SLUG) { return `./${file}?room=${encodeURIComponent(slug)}`; }
+    function pageUrl(file) { return `./${file}`; }
 
     async function loadRooms() {
+      // Single-room edition: retain the legacy primary room only.
       const result = await api("adminListRooms");
-      const select = $("active-room-select");
-      select.replaceChildren();
-      const list = $("rooms-list"); list.replaceChildren();
-      for (const room of result.rooms || []) {
-        const option = document.createElement("option"); option.value = room.slug;
-        option.textContent = `${room.name} (${room.slug})${room.enabled ? "" : " — ปิดใช้งาน"}`;
-        select.append(option);
-
-        const row = document.createElement("div"); row.className = "item";
-        const main = document.createElement("div"); main.className = "item-main";
-        const title = document.createElement("div"); title.className = "item-title"; title.textContent = room.name;
-        const meta = document.createElement("div"); meta.className = "item-meta"; meta.textContent = `/${room.slug} · ${room.enabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}`;
-        main.append(title, meta);
-        const controls = document.createElement("div"); controls.className = "actions";
-        const open = document.createElement("button"); open.className = "secondary small-btn"; open.textContent = "จัดการห้อง";
-        open.addEventListener("click", () => location.href = pageUrl("admin.html", room.slug));
-        controls.append(open);
-        if (currentRole === "ADMIN" && room.slug !== "one") {
-          const toggle = document.createElement("button"); toggle.className = room.enabled ? "danger small-btn" : "small-btn";
-          toggle.textContent = room.enabled ? "ปิดห้อง" : "เปิดห้อง";
-          toggle.addEventListener("click", async () => {
-            toggle.disabled = true;
-            try {
-              await api("adminUpdateRoom", { room_id: room.id, enabled: !room.enabled });
-              await loadRooms(); say(`ปรับสถานะห้อง ${room.name} แล้ว`, true);
-            } catch (error) { say(error.message); toggle.disabled = false; }
-          });
-          controls.append(toggle);
-        }
-        row.append(main, controls); list.append(row);
-      }
-      select.value = ROOM_SLUG;
-      if (!result.rooms?.length) list.innerHTML = '<div class="empty">ยังไม่มีห้องเพลง</div>';
-      $("current-room-label").textContent = `กำลังจัดการ: ${result.rooms?.find(r => r.slug === ROOM_SLUG)?.name || ROOM_SLUG}`;
-      $("room-create-form").classList.toggle("hidden", currentRole !== "ADMIN");
+      const room = (result.rooms || []).find((item) => item.slug === "one");
+      if (room) $("current-room-label").textContent = `ห้องเพลง: ${room.name}`;
     }
-
-    $("open-room-btn").addEventListener("click", () => {
-      location.href = pageUrl("admin.html", $("active-room-select").value || "one");
-    });
-    $("room-create-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const button = $("create-room-btn"); button.disabled = true;
-      try {
-        const result = await api("adminCreateRoom", { name: $("new-room-name").value.trim(), slug: $("new-room-slug").value.trim().toLowerCase() });
-        say(`สร้างห้อง ${result.room.name} สำเร็จ กำลังเปิดห้องใหม่…`, true);
-        location.href = pageUrl("admin.html", result.room.slug);
-      } catch (error) { say(error.message); button.disabled = false; }
-    });
 
     async function loadAll() {
       say("กำลังโหลดข้อมูลผู้ดูแล…");
@@ -397,6 +352,7 @@
 
     function renderGlobalSchedule(schedule = {}) {
       $("global-schedule-enabled").checked = schedule.enabled !== false;
+      $("global-start-time").value = String(schedule.start_time || "11:40:00").slice(0, 5);
       $("global-stop-time").value = String(schedule.stop_time || "12:25:00").slice(0, 5);
     }
 
@@ -509,10 +465,11 @@
       try {
         const result = await api("adminSaveGlobalSchedule", {
           enabled: $("global-schedule-enabled").checked,
+          start_time: $("global-start-time").value,
           stop_time: $("global-stop-time").value,
         });
         renderGlobalSchedule(result.schedule || {});
-        say(`บันทึกเวลาหยุดเล่นทุกห้องเป็น ${String(result.schedule?.stop_time || "").slice(0, 5)} น. แล้ว`, true);
+        say(`บันทึกเวลาเล่น ${String(result.schedule?.start_time || "11:40").slice(0, 5)}–${String(result.schedule?.stop_time || "12:25").slice(0, 5)} น. แล้ว`, true);
       } catch (error) { say(error.message); }
       finally { button.disabled = false; }
     });
@@ -631,7 +588,6 @@
       if (session) await loadAll();
     }
   </script>
-  <script type="module">const room=(new URLSearchParams(location.search).get("room")||"one");for(const a of document.querySelectorAll('a[href*="?room=one"]'))a.href=a.href.replace(/room=one$/,`room=${encodeURIComponent(room)}`);</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>

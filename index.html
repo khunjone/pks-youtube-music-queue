@@ -19,7 +19,6 @@
     <nav class="header-nav" aria-label="เมนูหลัก">
       <span id="connection" class="connection-pill">กำลังเชื่อมต่อ…</span>
       <a id="library-link" class="nav-link" href="./library.html?room=one">คลังเพลง</a>
-      <a class="nav-link nav-link-primary" href="./rooms.html">เลือกห้องเพลง</a>
     </nav>
   </header>
   <main class="page-main">
@@ -71,7 +70,6 @@
     <p id="notice" role="status"></p>
   </main>
   <script type="module" src="assets/app.js"></script>
-  <script type="module">const room=encodeURIComponent(new URLSearchParams(location.search).get("room")||"one");document.getElementById("library-link")?.setAttribute("href",`./library.html?room=${room}`);</script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
 </html>
