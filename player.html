@@ -691,6 +691,23 @@
         } else if (command === "SYNC_SETTINGS") {
           applyPlayerControl(payload);
           showStatus("รับการตั้งค่า Player จากผู้ดูแลแล้ว");
+        } else if (command === "DAILY_RESET") {
+          // Stop the current track and clear local Player state after the database reset.
+          cancelDjSpeech();
+          pendingAnnouncementSongId = "";
+          if (playerReady && player?.pauseVideo) {
+            try { player.pauseVideo(); } catch (_) { /* YouTube player may already be stopped. */ }
+          }
+          currentSong = null;
+          prepared = null;
+          advancing = false;
+          $("song-title").textContent = "สิ้นสุดรอบการเล่นวันนี้";
+          $("song-sub").textContent = "ระบบล้าง Session และคิวเพลงที่รอเล่นแล้ว";
+          $("play-btn").disabled = true;
+          $("pause-btn").disabled = true;
+          $("skip-btn").disabled = true;
+          await refreshPlayerQueue();
+          showStatus("ถึงเวลาหยุดเล่น ระบบล้าง Session และคำขอเพลงประจำวันเรียบร้อยแล้ว");
         }
       } catch (error) {
         showStatus(`รับคำสั่งจากผู้ดูแลไม่สำเร็จ: ${error.message}`);
