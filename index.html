@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="assets/style.css">
   <link rel="stylesheet" href="assets/modern-blue.css">
   <link rel="stylesheet" href="assets/spotify-inspired.css">
+  <link rel="stylesheet" href="assets/easy-request-ui.css">
+  <link rel="stylesheet" href="assets/tipmydj-purple.css?v=20261104">
 </head>
 <body>
     <header class="site-header">
@@ -21,37 +23,49 @@
     </nav>
   </header>
   <main class="page-main">
-    <section class="page-intro">
-      <div><p class="eyebrow">โรงเรียนวัดโป่งก้อนเส้า · SCHOOL RADIO</p><h2>ส่งเพลงที่ชอบ...แบ่งปันความสุขให้กัน</h2><p>ค้นหาเพลง ฝากข้อความถึงเพื่อน และร่วมโหวตเพลงในห้องเพลงของเรา</p></div>
-      <span class="intro-note"><strong>♫</strong><small>เพลงของเรา<br>เสียงของชุมชน</small></span>
+    <section class="page-intro listener-hero">
+      <div>
+        <p class="eyebrow">โรงเรียนวัดโป่งก้อนเส้า · SCHOOL RADIO</p>
+        <h2>อยากฟังเพลงไหน ฝากเพลงได้เลย</h2>
+        <p>ค้นหาเพลงที่ชอบ แล้วส่งเข้าคิวเสียงตามสายได้ในไม่กี่ขั้นตอน</p>
+        <div class="listener-steps" aria-label="วิธีฝากเพลง">
+          <span><b>1</b> กรอกชื่อ</span><span><b>2</b> ค้นหาเพลง</span><span><b>3</b> แตะฝากเพลง</span>
+        </div>
+      </div>
+      <span class="intro-note"><strong>♫</strong><small>ฝากเพลงง่าย ๆ<br>ไม่ต้องสมัครสมาชิก</small></span>
     </section>
-    <section id="session-panel" class="panel">
-      <h2>เริ่มใช้งาน</h2>
-      <label>ชื่อผู้ส่งเพลง <input id="display-name" maxlength="80" placeholder="กรอกชื่อของคุณ"></label>
-      <button id="start-session">เข้าสู่ห้องเพลง</button>
+    <section id="session-panel" class="panel listener-start-card">
+      <div class="listener-start-icon" aria-hidden="true">♫</div>
+      <div class="listener-start-copy">
+        <p class="eyebrow">เริ่มต้นใช้งาน</p>
+        <h2>คุณชื่ออะไร?</h2>
+        <p class="muted">กรอกชื่อผู้ฝากเพลงเพียงครั้งเดียวในวันนี้ ไม่ต้องสมัครสมาชิก</p>
+      </div>
+      <label class="listener-name-field">ชื่อผู้ส่งเพลง <input id="display-name" maxlength="80" placeholder="เช่น น้องมะลิ" autocomplete="nickname"></label>
+      <button id="start-session" class="listener-start-button">เริ่มฝากเพลง <span aria-hidden="true">→</span></button>
     </section>
     <section id="app-panel" hidden>
       <section class="panel search-panel">
         <div class="search-heading">
-          <div><p class="eyebrow">YOUTUBE MUSIC SEARCH</p><h2>ค้นหาเพลงที่คุณชอบ</h2><p class="muted">พิมพ์ชื่อเพลงหรือศิลปิน แล้วเลือกเพลงเพื่อฝากเข้าคิว</p></div>
-          <span class="search-symbol" aria-hidden="true">♫</span>
+          <div><p class="eyebrow">ขั้นตอนที่ 1 · ค้นหาเพลง</p><h2>ค้นหาเพลงที่อยากฟัง</h2><p class="muted">พิมพ์ชื่อเพลงหรือศิลปิน แล้วแตะ “ฝากเพลงนี้”</p></div>
+          <span class="search-symbol" aria-hidden="true">⌕</span>
         </div>
         <form id="search-form" class="search-form">
-          <label class="search-input-wrap" for="query"><span aria-hidden="true">⌕</span><input id="query" placeholder="ค้นหาชื่อเพลงหรือศิลปิน…" minlength="2" autocomplete="off" required></label>
+          <label class="search-input-wrap" for="query"><span aria-hidden="true">⌕</span><input id="query" placeholder="พิมพ์ชื่อเพลงหรือศิลปินที่นี่" minlength="2" autocomplete="off" required></label>
           <button id="search-button" class="search-button" type="submit"><span aria-hidden="true">⌕</span> ค้นหาเพลง</button>
         </form>
         <details class="dedication-details">
-          <summary>เพิ่มข้อความฝากเพลง <span>(ไม่บังคับ)</span></summary>
+          <summary><span class="dedication-summary-title">อยากฝากถึงเพื่อนหรือไม่?</span><span class="dedication-summary-note">เพิ่มชื่อผู้รับและข้อความได้ (ไม่บังคับ)</span></summary>
           <div class="dedication-fields">
             <label>ฝากถึง<input id="recipient" maxlength="50" placeholder="ชื่อผู้รับเพลง"></label>
-            <label>ข้อความฝากเพลง<input id="message" maxlength="200" placeholder="เขียนข้อความสั้น ๆ ถึงผู้รับ"></label>
+            <label>ข้อความฝากเพลง<input id="message" maxlength="200" placeholder="เขียนข้อความสั้น ๆ"></label>
           </div>
         </details>
         <div id="search-results" aria-live="polite"></div>
       </section>
-      <section class="panel">
-        <h2>คิวเพลง <small>เรียงตามคะแนนโหวตสูงสุด</small></h2>
-        <div id="queue"></div>
+      <section class="panel listener-queue-panel">
+        <div class="listener-queue-heading"><div><p class="eyebrow">ขั้นตอนที่ 2 · ดูรายการเพลง</p><h2>เพลงที่เพื่อน ๆ ฝากไว้</h2><p class="muted">โหวตเพลงที่อยากฟัง เพื่อช่วยจัดลำดับคิว</p></div><span class="request-live-badge"><i></i> LIVE</span></div>
+        <div id="queue" aria-live="polite"></div>
       </section>
     </section>
     <p id="notice" role="status"></p>

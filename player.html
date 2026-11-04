@@ -35,6 +35,8 @@
   </style>
   <link rel="stylesheet" href="assets/modern-blue.css">
   <link rel="stylesheet" href="assets/spotify-inspired.css">
+  <link rel="stylesheet" href="assets/easy-request-ui.css">
+  <link rel="stylesheet" href="assets/tipmydj-purple.css?v=20261104">
 </head>
 <body>
     <header class="site-header">
@@ -50,11 +52,12 @@
   </header>
   <main class="page-main">
     <section class="panel" id="connect-panel">
-      <h2>เชื่อมต่อเครื่องเล่นหลัก</h2>
-      <p class="muted">ใช้เฉพาะอุปกรณ์ที่ต่อกับลำโพงของห้องเพลง และเปิดหน้านี้ค้างไว้ขณะใช้งาน</p>
+      <p class="eyebrow">ตั้งค่าเครื่องเล่นประจำห้อง</p>
+      <h2>เชื่อมต่อลำโพงของห้องนี้</h2>
+      <p class="muted">เปิดหน้านี้บนคอมพิวเตอร์ที่ต่อกับลำโพง กรอกรหัส Player แล้วปล่อยให้หน้านี้เปิดค้างไว้</p>
       <label for="player-code">รหัสควบคุม Player</label>
       <input id="player-code" type="password" autocomplete="current-password" placeholder="กรอกรหัสที่ผู้ดูแลกำหนด">
-      <button id="connect-btn">เชื่อมต่อเครื่องเล่น</button>
+      <button id="connect-btn" class="player-connect-button">เริ่มเชื่อมต่อ Player <span aria-hidden="true">→</span></button>
       <p id="connect-status" class="status" role="status"></p>
     </section>
 

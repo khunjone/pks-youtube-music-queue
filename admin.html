@@ -23,6 +23,8 @@
   </style>
   <link rel="stylesheet" href="assets/modern-blue.css">
   <link rel="stylesheet" href="assets/spotify-inspired.css">
+  <link rel="stylesheet" href="assets/easy-request-ui.css">
+  <link rel="stylesheet" href="assets/tipmydj-purple.css?v=20261104">
 </head>
 <body>
     <header class="site-header">
@@ -56,8 +58,9 @@
 
     <section id="admin-panel" class="hidden">
       <section class="panel queue-manager-panel" id="queue-panel">
-        <div class="section-head"><div><p class="eyebrow" style="margin:0 0 4px;color:#2a7db9;font-size:11px;font-weight:850;letter-spacing:1px">QUEUE MANAGEMENT</p><h2 style="margin:0">จัดการคิวเพลง</h2><p class="muted" style="margin:4px 0 0">คิวเพลงของห้องที่เลือก เรียงตามคะแนนโหวตสูงสุด</p></div><button id="clear-queue" class="danger">นำเพลงรอทั้งหมดออก</button></div>
-        <div id="queue-list" class="list queue-list"><div class="empty">กำลังโหลดคิว…</div></div>
+        <div class="section-head"><div><p class="eyebrow" style="margin:0 0 4px;color:#2a7db9;font-size:11px;font-weight:850;letter-spacing:1px">LIVE REQUESTS</p><h2 style="margin:0">จัดการคำขอเพลง</h2><p class="muted" style="margin:4px 0 0">ตรวจสอบเพลงที่เพื่อน ๆ ฝากไว้ และดูแลคิวของห้องนี้</p></div><button id="clear-queue" class="danger">ล้างเพลงที่รอทั้งหมด</button></div>
+        <div class="request-dashboard-bar"><div><span class="request-live-badge"><i></i> รับคำขอแบบเรียลไทม์</span><span class="request-hint">รายการจะแสดงเมื่อมีผู้ฝากเพลง</span></div><strong id="queue-total">0 เพลง</strong></div>
+        <div id="queue-list" class="list queue-list" aria-live="polite"><div class="empty">กำลังโหลดรายการเพลง…</div></div>
       </section>
 
       <section class="panel player-remote-panel" id="player-control-panel">
@@ -399,13 +402,14 @@
 
     function renderQueue(songs) {
       const root = $("queue-list"); root.replaceChildren();
-      if (!songs.length) { root.innerHTML = '<div class="empty">ไม่มีเพลงที่กำลังเล่นหรือรอเล่น</div>'; return; }
+      $("queue-total").textContent = `${songs.length} เพลง`;
+      if (!songs.length) { root.innerHTML = '<div class="empty request-empty"><strong>ยังไม่มีคำขอเพลง</strong><span>เมื่อมีผู้ฝากเพลง รายการจะปรากฏที่นี่โดยอัตโนมัติ</span></div>'; return; }
       for (const song of songs) {
-        const row = document.createElement("div"); row.className = "item";
+        const row = document.createElement("div"); row.className = `item request-card ${song.status === "PLAYING" ? "is-playing" : "is-waiting"}`;
         const status = song.status === "PLAYING" ? "กำลังเล่น" : "รอเล่น";
-        row.innerHTML = `<div class="item-main"><div class="item-title">${esc(song.title)}</div><div class="item-meta"><span class="tag">${status}</span> ${song.vote_count} คะแนน • ผู้ส่ง ${esc(song.submitted_by)} • ${dateText(song.submitted_at)}${song.recipient ? ` • ถึง ${esc(song.recipient)}` : ""}${song.message ? `<br>${esc(song.message)}` : ""}</div></div>`;
+        row.innerHTML = `<div class="request-status-icon" aria-hidden="true">${song.status === "PLAYING" ? "♫" : "♪"}</div><div class="item-main"><div class="item-title">${esc(song.title)}</div><div class="item-meta"><span class="tag request-status-tag">${status}</span><span class="request-votes">${song.vote_count} โหวต</span><span>ผู้ฝาก ${esc(song.submitted_by)}</span><span>${dateText(song.submitted_at)}</span>${song.recipient ? `<span>ถึง ${esc(song.recipient)}</span>` : ""}${song.message ? `<div class="request-message">“${esc(song.message)}”</div>` : ""}</div></div>`;
         if (song.status === "WAITING") {
-          const btn = document.createElement("button"); btn.className = "danger small-btn"; btn.textContent = "นำออก"; btn.dataset.removeSong = song.id;
+          const btn = document.createElement("button"); btn.className = "danger small-btn request-remove-button"; btn.textContent = "นำออกจากคิว"; btn.dataset.removeSong = song.id;
           row.append(btn);
         }
         root.append(row);

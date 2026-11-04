@@ -11,6 +11,8 @@
   </style>
   <link rel="stylesheet" href="assets/modern-blue.css">
   <link rel="stylesheet" href="assets/spotify-inspired.css">
+  <link rel="stylesheet" href="assets/easy-request-ui.css">
+  <link rel="stylesheet" href="assets/tipmydj-purple.css?v=20261104">
 </head>
 <body>
     <header class="site-header">
@@ -24,7 +26,7 @@
     </nav>
   </header>
   <main class="page-main">
-    <section class="page-intro rooms-intro"><div><p class="eyebrow">SCHOOL RADIO · MULTI-ROOM</p><h2>เลือกพื้นที่แห่งเสียงเพลง</h2><p>แต่ละห้องมีกิจกรรม คิวเพลง และเครื่องเล่นแยกจากกัน</p></div><span class="intro-note"><strong>♫</strong><small>เลือกห้อง<br>แล้วร่วมสนุก</small></span></section>
+    <section class="page-intro rooms-intro"><div><p class="eyebrow">SCHOOL RADIO · MULTI-ROOM</p><h2>เลือกพื้นที่แห่งเสียงเพลง</h2><p>เลือกห้องที่ต้องการ แล้วฝากเพลงให้เพื่อน ๆ ในห้องนั้นได้ทันที</p></div><span class="intro-note"><strong>♫</strong><small>เลือกห้อง<br>แล้วร่วมสนุก</small></span></section>
     <section class="intro">
       <h2 style="margin:0 0 8px;font-size:19px">ห้องเพลงที่เปิดให้ใช้งาน</h2>
       <p style="margin:0">เลือกห้องที่ต้องการเข้าร่วม แต่ละห้องมีคิวเพลง การโหวต Player คลังเพลง และธีมกิจกรรมแยกจากกัน</p>
@@ -53,8 +55,8 @@
           const title = document.createElement("h2"); title.textContent = room.name;
           const slug = document.createElement("div"); slug.className = "slug"; slug.textContent = `Room: ${room.slug}`;
           const actions = document.createElement("div"); actions.className = "actions";
-          const join = document.createElement("a"); join.className = "button"; join.href = link("index.html", room.slug); join.textContent = "เข้าห้องเพลง";
-          const player = document.createElement("a"); player.className = "button secondary"; player.href = link("player.html", room.slug); player.textContent = "หน้า Player";
+          const join = document.createElement("a"); join.className = "button"; join.href = link("index.html", room.slug); join.textContent = "ฝากเพลงในห้องนี้";
+          const player = document.createElement("a"); player.className = "button secondary"; player.href = link("player.html", room.slug); player.textContent = "ดูหน้า Player";
           actions.append(join, player); card.append(title, slug, actions); root.append(card);
         }
         if (!result.rooms?.length) root.innerHTML = '<div class="empty">ยังไม่มีห้องเพลงที่เปิดใช้งาน</div>';
