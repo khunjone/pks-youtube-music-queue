@@ -215,3 +215,9 @@ progress::-webkit-progress-value { background: var(--tip-purple) !important; }
   .page-intro, .listener-hero { background: linear-gradient(135deg,#24163d,#10081f) !important; }
   .panel { background: var(--tip-panel) !important; }
 }
+
+/* Player queue list */
+.player-queue-item{display:flex;align-items:center;gap:14px;padding:12px 14px;margin:8px 0;border:1px solid rgba(132,91,204,.35);border-radius:13px;background:rgba(19,10,34,.78)}
+.queue-number{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:10px;background:#6245a5;color:#fff;font-size:15px}
+.player-queue-item .item-main{min-width:0;flex:1}
+.player-queue-item .item-title{overflow-wrap:anywhere}

@@ -3,7 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
 const notice = (text) => { $("notice").textContent = text || ""; };
-const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+const ROOM_SLUG = "one";
 const TOKEN_KEY = `ymq_session_token_${ROOM_SLUG}`;
 const EXPIRY_KEY = `ymq_session_expiry_${ROOM_SLUG}`;
 const ready = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
@@ -115,11 +115,12 @@ $("search-form").addEventListener("submit", async (event) => {
     if (searchButton) { searchButton.disabled = true; searchButton.textContent = "กำลังค้นหา…"; }
     const { items } = await api("searchSongs", { query: $("query").value });
     $("search-results").replaceChildren();
-    if (!items.length) $("search-results").textContent = "ไม่พบเพลง";
+    if (!items.length) $("search-results").innerHTML = '<div class="empty request-empty">ไม่พบเพลงที่ค้นหา ลองพิมพ์ชื่อเพลงหรือศิลปินอีกครั้ง</div>';
     items.forEach((song) => {
       const row = songElement(song, false);
       const add = document.createElement("button");
-      add.textContent = "เพิ่มเพลง";
+      add.textContent = "ฝากเพลงนี้";
+      add.setAttribute("aria-label", `ฝากเพลง ${song.title} เข้าคิว`);
       add.addEventListener("click", async () => {
         add.disabled = true;
         try {
@@ -128,7 +129,7 @@ $("search-form").addEventListener("submit", async (event) => {
             recipient: $("recipient").value.trim(),
             message: $("message").value.trim(),
           });
-          notice("เพิ่มเพลงเข้าคิวแล้ว");
+          notice(`ฝากเพลง “${song.title}” เข้าคิวเรียบร้อยแล้ว`);
           await loadQueue();
         } catch (e) { notice(e.message); add.disabled = false; }
       });
@@ -167,7 +168,7 @@ async function loadQueue() {
   try {
     const { songs } = await api("getQueue");
     $("queue").replaceChildren();
-    if (!songs.length) { $("queue").textContent = "ยังไม่มีเพลงในคิว"; return; }
+    if (!songs.length) { $("queue").innerHTML = '<div class="empty request-empty"><strong>ยังไม่มีเพลงในคิว</strong><span>เริ่มค้นหาเพลง แล้วฝากเพลงแรกให้เพื่อน ๆ ฟังได้เลย</span></div>'; return; }
     songs.forEach((song, index) => {
       const row = songElement(song, true);
       const controls = document.createElement("div"); controls.className = "vote";

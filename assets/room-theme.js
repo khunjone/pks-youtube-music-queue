@@ -49,13 +49,15 @@ function applyTheme(appearance) {
   }
 }
 
+export const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+
 export async function refreshRoomTheme() {
   try {
     if (!SUPABASE_URL?.startsWith("https://") || !SUPABASE_PUBLISHABLE_KEY) return;
     const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY },
-      body: JSON.stringify({ action: "getRoomAppearance" }),
+      body: JSON.stringify({ action: "getRoomAppearance", room_slug: ROOM_SLUG }),
     });
     if (!response.ok) return;
     const result = await response.json();
