@@ -3,8 +3,20 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
 const notice = (text) => { $("notice").textContent = text || ""; };
+const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+const TOKEN_KEY = `ymq_session_token_${ROOM_SLUG}`;
+const EXPIRY_KEY = `ymq_session_expiry_${ROOM_SLUG}`;
 const ready = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
-let client, token = localStorage.getItem("ymq_session_token"), channel;
+let client, token = localStorage.getItem(TOKEN_KEY) || (ROOM_SLUG === "one" ? localStorage.getItem("ymq_session_token") : ""), channel;
+let sessionExpiryTimer = null;
+let sessionExpiryValue = "";
+const storedExpiry = Number(localStorage.getItem(EXPIRY_KEY) || 0);
+if (token && storedExpiry && storedExpiry <= Date.now()) {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EXPIRY_KEY);
+  if (ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token");
+  token = "";
+}
 
 if (!ready) {
   $("connection").textContent = "กรุณาตั้งค่า assets/config.js";
@@ -15,6 +27,39 @@ if (!ready) {
   if (token) showApp();
 }
 
+function clearUserSession(message = "Session ประจำวันหมดอายุ กรุณากรอกชื่อเพื่อเริ่มใช้งานใหม่") {
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
+  sessionExpiryTimer = null;
+  sessionExpiryValue = "";
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EXPIRY_KEY);
+  if (ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token");
+  token = "";
+  if (channel) { client?.removeChannel(channel); channel = null; }
+  $("app-panel").hidden = true;
+  $("session-panel").hidden = false;
+  $("queue").replaceChildren();
+  notice(message);
+}
+
+function scheduleSessionExpiry(value) {
+  const expiresAt = Date.parse(value || "");
+  if (!Number.isFinite(expiresAt)) return;
+  if (sessionExpiryValue === value && sessionExpiryTimer) return;
+  sessionExpiryValue = value;
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
+  localStorage.setItem(EXPIRY_KEY, String(expiresAt));
+  const expire = () => {
+    const remaining = expiresAt - Date.now();
+    if (remaining > 0) {
+      sessionExpiryTimer = setTimeout(expire, Math.min(remaining, 2147483647));
+      return;
+    }
+    clearUserSession();
+  };
+  expire();
+}
+
 async function api(action, data = {}) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
     method: "POST",
@@ -23,10 +68,18 @@ async function api(action, data = {}) {
       "apikey": SUPABASE_PUBLISHABLE_KEY,
       ...(token ? { "x-session-token": token } : {}),
     },
-    body: JSON.stringify({ action, ...data }),
+    body: JSON.stringify({ action, room_slug: ROOM_SLUG, ...data }),
   });
   const result = await response.json();
-  if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+  if (!response.ok || !result.ok) {
+    const message = result.error || `HTTP ${response.status}`;
+    if (token && /Session หมดอายุ|กรุณาเริ่มใช้งานด้วยชื่อผู้ส่ง/.test(message)) {
+      clearUserSession(message);
+    }
+    throw new Error(message);
+  }
+  if (result.expires_at) scheduleSessionExpiry(result.expires_at);
+  if (result.session_expires_at) scheduleSessionExpiry(result.session_expires_at);
   return result;
 }
 
@@ -35,7 +88,8 @@ $("start-session").addEventListener("click", async () => {
     const name = $("display-name").value.trim();
     const result = await api("createSession", { display_name: name });
     token = result.session_token;
-    localStorage.setItem("ymq_session_token", token);
+    localStorage.setItem(TOKEN_KEY, token);
+    if (ROOM_SLUG === "one") localStorage.setItem("ymq_session_token", token);
     showApp();
     notice(`ยินดีต้อนรับ ${result.display_name}`);
   } catch (e) { notice(e.message); }
@@ -46,15 +100,19 @@ function showApp() {
   $("app-panel").hidden = false;
   loadQueue();
   if (channel) client.removeChannel(channel);
-  channel = client.channel("music-room-live")
-    .on("postgres_changes", { event: "*", schema: "public", table: "songs" }, loadQueue)
+  // Subscribe only to a minimal room signal. Song/dedication rows remain server-only.
+  channel = client.channel(`music-room-live-${ROOM_SLUG}`)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "queue_signals", filter: `room_slug=eq.${ROOM_SLUG}` }, loadQueue)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "queue_signals", filter: `room_slug=eq.${ROOM_SLUG}` }, loadQueue)
     .subscribe();
 }
 
 $("search-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
-    notice("กำลังค้นหา…");
+    notice("กำลังค้นหาเพลง…");
+    const searchButton = $("search-button");
+    if (searchButton) { searchButton.disabled = true; searchButton.textContent = "กำลังค้นหา…"; }
     const { items } = await api("searchSongs", { query: $("query").value });
     $("search-results").replaceChildren();
     if (!items.length) $("search-results").textContent = "ไม่พบเพลง";
@@ -79,6 +137,10 @@ $("search-form").addEventListener("submit", async (event) => {
     });
     notice(`พบ ${items.length} รายการ`);
   } catch (e) { notice(e.message); }
+  finally {
+    const searchButton = $("search-button");
+    if (searchButton) { searchButton.disabled = false; searchButton.innerHTML = '<span aria-hidden="true">⌕</span> ค้นหาเพลง'; }
+  }
 });
 
 function songElement(song, queued) {

@@ -89,13 +89,46 @@
     const $ = (id) => document.getElementById(id);
     const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
     const TOKEN_KEY = `ymq_session_token_${ROOM_SLUG}`;
+    const EXPIRY_KEY = `ymq_session_expiry_${ROOM_SLUG}`;
     const ready = typeof SUPABASE_URL === "string" && SUPABASE_URL.startsWith("https://") &&
       typeof SUPABASE_PUBLISHABLE_KEY === "string" && SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
     let token = localStorage.getItem(TOKEN_KEY) || (ROOM_SLUG === "one" ? localStorage.getItem("ymq_session_token") : "");
     let selectedPlaylistId = "";
     let selectedPlaylistName = "";
+    let sessionExpiryTimer = null;
+    let sessionExpiryValue = "";
+    const storedExpiry = Number(localStorage.getItem(EXPIRY_KEY) || 0);
+    if (token && storedExpiry && storedExpiry <= Date.now()) {
+      localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(EXPIRY_KEY);
+      if (ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token");
+      token = "";
+    }
 
     const setStatus = (message, kind = "") => { $("status").textContent = message || ""; $("status").className = `status ${kind}`; };
+    function clearUserSession(message = "Session ประจำวันหมดอายุ กรุณาเริ่มใช้งานใหม่") {
+      if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
+      sessionExpiryTimer = null; sessionExpiryValue = "";
+      localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(EXPIRY_KEY);
+      if (ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token");
+      token = ""; selectedPlaylistId = ""; selectedPlaylistName = "";
+      showSession(message);
+    }
+
+    function scheduleSessionExpiry(value) {
+      const expiresAt = Date.parse(value || "");
+      if (!Number.isFinite(expiresAt)) return;
+      if (sessionExpiryValue === value && sessionExpiryTimer) return;
+      sessionExpiryValue = value;
+      if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
+      localStorage.setItem(EXPIRY_KEY, String(expiresAt));
+      const expire = () => {
+        const remaining = expiresAt - Date.now();
+        if (remaining > 0) { sessionExpiryTimer = setTimeout(expire, Math.min(remaining, 2147483647)); return; }
+        clearUserSession();
+      };
+      expire();
+    }
+
     const api = async (action, data = {}) => {
       if (!ready) throw new Error("กรุณาตั้งค่า assets/config.js ให้ถูกต้อง");
       const response = await fetch(`${SUPABASE_URL}/functions/v1/music-api`, {
@@ -104,7 +137,13 @@
         body: JSON.stringify({ action, room_slug: ROOM_SLUG, ...data }),
       });
       const result = await response.json();
-      if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      if (!response.ok || !result.ok) {
+        const message = result.error || `HTTP ${response.status}`;
+        if (token && /Session หมดอายุ|กรุณาเริ่มใช้งานด้วยชื่อผู้ส่ง/.test(message)) clearUserSession(message);
+        throw new Error(message);
+      }
+      if (result.expires_at) scheduleSessionExpiry(result.expires_at);
+      if (result.session_expires_at) scheduleSessionExpiry(result.session_expires_at);
       return result;
     };
     const node = (tag, cls, text) => { const el=document.createElement(tag); if(cls) el.className=cls; if(text!==undefined) el.textContent=text; return el; };
@@ -195,7 +234,7 @@
         setStatus("โหลดคลังเพลงเรียบร้อย", "success");
       } catch (error) {
         if (/Session หมดอายุ|เริ่มใช้งานด้วยชื่อผู้ส่ง/.test(error.message)) {
-          localStorage.removeItem(TOKEN_KEY); if(ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token"); token=""; showSession("Session หมดอายุ กรุณาเริ่มใช้งานใหม่");
+          clearUserSession("Session หมดอายุ กรุณาเริ่มใช้งานใหม่");
         } else setStatus(error.message,"error");
       }
     }
@@ -272,7 +311,7 @@
     });
 
     $("reload-btn").addEventListener("click",loadLibrary);
-    $("new-session-btn").addEventListener("click",()=>{ localStorage.removeItem(TOKEN_KEY); if(ROOM_SLUG === "one") localStorage.removeItem("ymq_session_token"); token=""; selectedPlaylistId=""; showSession("กรอกชื่อเพื่อเริ่ม Session ใหม่"); });
+    $("new-session-btn").addEventListener("click",()=>{ clearUserSession("กรอกชื่อเพื่อเริ่ม Session ใหม่"); });
 
     if(!ready) showSession("กรุณาตั้งค่า assets/config.js ก่อนใช้งาน");
     else if(token) await loadLibrary();

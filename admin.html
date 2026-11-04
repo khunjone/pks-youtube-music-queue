@@ -8,6 +8,17 @@
   <style>
     :root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fb;color:#182437}
     *{box-sizing:border-box}body{margin:0;background:#f3f6fb}header{background:#12243b;color:#fff;padding:18px max(4vw,18px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}main{width:min(1180px,94vw);margin:24px auto 60px}.panel{background:white;border:1px solid #e0e7f0;border-radius:14px;padding:20px;margin:0 0 18px;box-shadow:0 6px 20px #1b31500b}.panel h2{margin:0 0 16px;font-size:19px}.muted{color:#68788e;font-size:13px}.status{min-height:24px;color:#1e598d}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:#f5f8fc;border:1px solid #e5ebf3;border-radius:12px;padding:15px}.stat span{display:block;color:#66768b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:4px;font-variant-numeric:tabular-nums}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:block;margin:12px 0;color:#46566b;font-size:14px}.field input[type=email],.field input[type=password],.field input[type=number],.field input[type=text]{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #ccd6e3;border-radius:8px;font:inherit;color:#182437;background:white}.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:center;padding:11px;background:#f7f9fc;border-radius:8px;font-size:14px}.check input{width:17px;height:17px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:#1d568d;color:white}button.secondary{background:#e8eef6;color:#27425f}button.danger{background:#a93442;color:white}button:disabled{opacity:.5;cursor:not-allowed}.list{display:grid;gap:9px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e6ebf2;border-radius:10px}.item-main{min-width:0;flex:1}.item-title{font-weight:650;overflow-wrap:anywhere}.item-meta{font-size:12px;color:#718198;margin-top:3px;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#eaf1f9;color:#315a84;font-size:11px;margin-right:5px}.empty{padding:18px;text-align:center;color:#718198;border:1px dashed #d4deea;border-radius:10px}.scroll{max-height:430px;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;border-bottom:1px solid #edf0f4;padding:9px 8px;vertical-align:top}.table th{color:#64758b;background:#f8fafc;position:sticky;top:0}.hidden{display:none!important}.error{color:#b42332}.success{color:#157347}.login{max-width:440px;margin:8vh auto}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small-btn{padding:7px 10px;font-size:12px}.footer{color:#8390a2;text-align:center;font-size:12px;margin:26px 0}
+    .queue-manager-panel{border:2px solid #b9d9f3;box-shadow:0 12px 30px rgba(23,105,170,.11)}
+    .queue-manager-panel h2{font-size:23px;color:#174c7b}
+    .queue-list .item{padding:14px;border-radius:13px}
+    .player-remote-panel{background:linear-gradient(135deg,#fff 0%,#f5faff 100%)}
+    .remote-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+    .remote-actions button{min-height:54px;font-size:15px;border-radius:13px}
+    .remote-settings-grid{align-items:end;gap:12px}
+    .remote-settings-grid input[type=range]{width:100%;accent-color:#1769aa}
+    .remote-setting-actions{padding-bottom:12px}
+    .remote-checks{margin-top:4px}
+    @media(max-width:680px){.remote-actions{grid-template-columns:1fr}.remote-actions button{width:100%;min-height:50px}.remote-setting-actions{padding:0}}
     @media(max-width:780px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.checks{grid-template-columns:1fr}.panel{padding:15px}.item{align-items:flex-start}}
   </style>
   <link rel="stylesheet" href="assets/modern-blue.css">
@@ -19,6 +30,8 @@
       <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>ศูนย์จัดการระบบ</small></span>
     </a>
     <nav class="header-nav" aria-label="เมนูผู้ดูแล">
+      <a href="#queue-panel" class="nav-link nav-link-primary">จัดการคิวเพลง</a>
+      <a href="#player-control-panel" class="nav-link">ควบคุม Player</a>
       <a href="./rooms.html" class="nav-link">เลือกห้อง</a>
       <a href="./library.html?room=one" class="nav-link">คลังเพลง</a>
       <a href="./analytics.html?room=one" class="nav-link">รายงานสถิติ</a>
@@ -41,6 +54,39 @@
     </section>
 
     <section id="admin-panel" class="hidden">
+      <section class="panel queue-manager-panel" id="queue-panel">
+        <div class="section-head"><div><p class="eyebrow" style="margin:0 0 4px;color:#2a7db9;font-size:11px;font-weight:850;letter-spacing:1px">QUEUE MANAGEMENT</p><h2 style="margin:0">จัดการคิวเพลง</h2><p class="muted" style="margin:4px 0 0">คิวเพลงของห้องที่เลือก เรียงตามคะแนนโหวตสูงสุด</p></div><button id="clear-queue" class="danger">นำเพลงรอทั้งหมดออก</button></div>
+        <div id="queue-list" class="list queue-list"><div class="empty">กำลังโหลดคิว…</div></div>
+      </section>
+
+      <section class="panel player-remote-panel" id="player-control-panel">
+        <div class="section-head"><div><p class="eyebrow" style="margin:0 0 4px;color:#2a7db9;font-size:11px;font-weight:850;letter-spacing:1px">REMOTE PLAYER CONTROL</p><h2 style="margin:0">ควบคุมเครื่องเล่น</h2><p class="muted" style="margin:4px 0 0">สั่งงาน Player ที่เชื่อมต่ออยู่ในห้องนี้จากระยะไกล</p></div><span class="tag" id="remote-player-status">รอข้อมูล Player</span></div>
+        <div class="remote-actions" id="remote-player-actions">
+          <button type="button" data-player-command="PLAY">▶ เล่น / เล่นต่อ</button>
+          <button type="button" class="secondary" data-player-command="PAUSE">Ⅱ พักเพลง</button>
+          <button type="button" class="danger" data-player-command="SKIP">ข้ามเพลง ⏭</button>
+        </div>
+        <div class="two remote-settings-grid">
+          <label class="field">ระดับเสียง Player <strong id="remote-volume-value">50%</strong><input id="remote-volume" type="range" min="0" max="100" step="1" value="50"></label>
+          <div class="remote-setting-actions"><button type="button" id="apply-remote-volume" class="secondary">ปรับระดับเสียง</button><p class="muted">ปรับเสียงของ YouTube Player ในห้องนี้</p></div>
+        </div>
+        <div class="checks remote-checks">
+          <label class="check"><input id="remote-ai-dj" type="checkbox" checked> เปิด AI DJ ประกาศชื่อเพลง</label>
+          <label class="check"><input id="remote-auto-next" type="checkbox" checked> เล่นเพลงถัดไปอัตโนมัติ</label>
+        </div>
+        <div class="actions"><button type="button" id="save-remote-settings">บันทึกการตั้งค่า Player</button></div>
+        <p class="muted">คำสั่งส่งผ่าน Supabase Realtime ไปยัง Player ของห้องนี้ ควรเปิดหน้า Player ค้างไว้ หาก Player ออฟไลน์ ระบบเก็บคำสั่งล่าสุดไว้จนกว่าเครื่องเล่นจะเชื่อมต่อใหม่ (คำสั่งใหม่จะแทนที่คำสั่งที่ยังไม่ถูกประมวลผล)</p>
+      </section>
+
+      <section class="panel" id="global-schedule-panel">
+        <div class="section-head"><div><h2 style="margin-bottom:4px">ตั้งเวลาหยุดเล่นทุกห้อง</h2><p class="muted" style="margin:0">ใช้เวลาไทย (Asia/Bangkok) และมีผลกับทุก Room พร้อมกัน</p></div><span class="tag">ส่วนกลาง</span></div>
+        <form id="global-schedule-form" class="two">
+          <label class="check" style="align-self:end"><input id="global-schedule-enabled" type="checkbox" checked> เปิดใช้งานเวลาหยุดเล่น</label>
+          <label class="field">หยุดเล่นเวลา<input id="global-stop-time" type="time" value="12:25" required></label>
+          <div><button type="submit" id="save-global-schedule">บันทึกเวลาหยุดเล่น</button><p class="muted">เมื่อถึงเวลาที่กำหนด Player ทุกห้องจะพักเพลงและไม่รับเพลงถัดไปจนถึงวันใหม่เวลา 00:00 น. หากต้องการเล่นต่อก่อนเที่ยงคืน ให้ปิดหรือเลื่อนเวลาหยุด และเมื่อพ้นเวลาแล้วให้สั่งเล่นต่อจาก Admin</p></div>
+        </form>
+      </section>
+
       <section class="panel">
         <div class="section-head"><h2>ภาพรวม</h2><span id="player-state" class="tag">กำลังอ่านสถานะ Player…</span></div>
         <div class="grid" id="stats-grid">
@@ -133,11 +179,6 @@
         <p class="muted">การเปลี่ยนแปลงจะมีผลกับหน้าสาธารณะหลังรีเฟรชหน้าเว็บ ไม่มีการเปลี่ยนคิวเพลงหรือสถานะ Player</p>
       </section>
 
-      <section class="panel">
-        <div class="section-head"><h2>จัดการคิวเพลง</h2><button id="clear-queue" class="danger small-btn">นำเพลงรอทั้งหมดออก</button></div>
-        <div id="queue-list" class="list"><div class="empty">กำลังโหลดคิว…</div></div>
-      </section>
-
       <section class="panel hidden" id="room-playlist-panel">
         <h2>จัดการเพลงประจำห้อง</h2>
         <p class="muted">เพิ่มเพลงจาก YouTube URL หรือ Video ID เพลงในรายการนี้จะแสดงให้ผู้ใช้ทุกคนเห็นในหน้าคลังเพลง แต่จะไม่ถูกเพิ่มเข้าคิวหรือเล่นเองอัตโนมัติ</p>
@@ -205,7 +246,7 @@
       $("logout-btn").classList.remove("hidden");
       $("refresh-btn").classList.remove("hidden");
       $("role-label").textContent = role === "ADMIN" ? "สิทธิ์ ADMIN" : "สิทธิ์ MODERATOR";
-      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel", "appearance-panel"]) {
+      for (const id of ["settings-panel", "sessions-panel", "logs-panel", "room-playlist-panel", "appearance-panel", "global-schedule-panel"]) {
         $(id).classList.toggle("hidden", role !== "ADMIN");
       }
     }
@@ -282,6 +323,9 @@
         $("stat-removed").textContent = s.removed;
         $("stat-errors").textContent = s.errors;
         $("player-state").textContent = `Player: ${overview.player?.status || "ไม่ทราบสถานะ"}`;
+        $("remote-player-status").textContent = `สถานะ ${overview.player?.status || "ไม่ทราบสถานะ"}`;
+        renderPlayerControl(overview.player_control || {});
+        renderGlobalSchedule(overview.global_schedule || {});
         renderSettings(overview.settings || {});
         renderAppearance(overview.settings?.room_appearance || {});
         renderQueue(queue.songs || []);
@@ -337,6 +381,19 @@
       $("welcome-message").value = a.welcome_message || "";
       $("appearance-enabled").checked = a.enabled !== false;
       $("banner-enabled").checked = a.show_banner !== false;
+    }
+
+    function renderPlayerControl(settings = {}) {
+      const volume = Math.max(0, Math.min(100, Number(settings.volume ?? 50)));
+      $("remote-volume").value = volume;
+      $("remote-volume-value").textContent = `${volume}%`;
+      $("remote-ai-dj").checked = settings.ai_dj_enabled !== false;
+      $("remote-auto-next").checked = settings.auto_next !== false;
+    }
+
+    function renderGlobalSchedule(schedule = {}) {
+      $("global-schedule-enabled").checked = schedule.enabled !== false;
+      $("global-stop-time").value = String(schedule.stop_time || "12:25:00").slice(0, 5);
     }
 
     function renderQueue(songs) {
@@ -399,6 +456,60 @@
         $("login-status").textContent = error.message;
         $("login-status").className = "status error";
       } finally { button.disabled = false; }
+    });
+
+    $("remote-volume").addEventListener("input", () => {
+      $("remote-volume-value").textContent = `${$("remote-volume").value}%`;
+    });
+
+    $("remote-player-actions").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-player-command]");
+      if (!button) return;
+      const command = button.dataset.playerCommand;
+      if (command === "SKIP" && !confirm("ยืนยันข้ามเพลงที่กำลังเล่นในห้องนี้?")) return;
+      button.disabled = true;
+      try {
+        await api("adminPlayerControl", { command });
+        say(`ส่งคำสั่ง ${command === "PLAY" ? "เล่นเพลง" : command === "PAUSE" ? "พักเพลง" : "ข้ามเพลง"} ไปยัง Player แล้ว`, true);
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("apply-remote-volume").addEventListener("click", async () => {
+      const button = $("apply-remote-volume"); button.disabled = true;
+      try {
+        await api("adminPlayerControl", { command: "SET_VOLUME", volume: Number($("remote-volume").value) });
+        say(`ส่งคำสั่งปรับเสียงเป็น ${$("remote-volume").value}% แล้ว`, true);
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("save-remote-settings").addEventListener("click", async () => {
+      const button = $("save-remote-settings"); button.disabled = true;
+      try {
+        await api("adminPlayerControl", {
+          command: "SYNC_SETTINGS",
+          ai_dj_enabled: $("remote-ai-dj").checked,
+          auto_next: $("remote-auto-next").checked,
+          volume: Number($("remote-volume").value),
+        });
+        say("บันทึกการตั้งค่า Player และส่งไปยังเครื่องเล่นแล้ว", true);
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
+    });
+
+    $("global-schedule-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("save-global-schedule"); button.disabled = true;
+      try {
+        const result = await api("adminSaveGlobalSchedule", {
+          enabled: $("global-schedule-enabled").checked,
+          stop_time: $("global-stop-time").value,
+        });
+        renderGlobalSchedule(result.schedule || {});
+        say(`บันทึกเวลาหยุดเล่นทุกห้องเป็น ${String(result.schedule?.stop_time || "").slice(0, 5)} น. แล้ว`, true);
+      } catch (error) { say(error.message); }
+      finally { button.disabled = false; }
     });
 
     $("settings-form").addEventListener("submit", async (event) => {

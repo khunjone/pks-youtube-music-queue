@@ -77,18 +77,20 @@
       <label class="muted" style="display:flex;align-items:center;gap:9px;margin:8px 0 0">
         <input id="ai-dj-enabled" type="checkbox" checked style="width:auto;margin:0"> เปิด AI DJ ประกาศชื่อเพลงและข้อความฝากเพลง
       </label>
-      <p class="muted">AI DJ ใช้เสียงภาษาไทยจากเบราว์เซอร์ โดยเริ่มประกาศพร้อมกับเสียงเพลง หากเครื่องไม่มีเสียงภาษาไทย ระบบจะใช้เสียงสำรองที่มีอยู่</p>
+      <p class="muted">AI DJ ใช้เสียง Online TTS ของ Microsoft Edge โดยเลือกเสียงผู้หญิงภาษาไทย Premwadee ก่อน และประกาศซ้อนกับเสียงเพลง พร้อมลดเสียงเพลงชั่วคราวระหว่างประกาศ ไม่ต้องสมัคร Azure ไม่ต้องใช้บัตรเครดิตหรือ API Key แนะนำให้เปิดหน้า Player ด้วย Microsoft Edge และเชื่อมต่ออินเทอร์เน็ต</p>
       <p class="muted">หมายเหตุ: เมื่อเชื่อมต่อเครื่องเล่นแล้ว หากเพลงไม่เริ่ม ให้กด “เริ่มเล่นเพลง” หรือปุ่มเล่นบน YouTube Player หนึ่งครั้ง</p>
     </section>
 
     <section class="panel">
       <strong>สถานะห้องเพลง</strong>
-      <p class="muted">Player ใช้การเช่าควบคุม (Lease) ครั้งละ 60 วินาที และต่ออายุทุก 15 วินาที เพื่อป้องกันการเปิดเครื่องเล่นหลายเครื่องพร้อมกัน</p>
+      <p class="muted">Player ใช้ Lease ครั้งละ 60 วินาทีและต่ออายุทุก 15 วินาที ผู้ดูแลสามารถสั่งเล่น พัก ข้ามเพลง ปรับเสียง และตั้งค่า AI DJ จากหน้า Admin ได้</p>
+      <p class="muted">เมื่อถึงเวลาหยุดส่วนกลาง Player ทุกห้องจะพักเพลงตามเวลาไทย และจะไม่เล่นเพลงถัดไปจนกว่าผู้ดูแลจะสั่งเล่นอีกครั้ง</p>
       <p id="public-status" class="status">กำลังอ่านสถานะ…</p>
     </section>
   </main>
 
   <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
@@ -107,6 +109,13 @@
     $("room-label").textContent = `ห้อง: ${ROOM_SLUG}`;
     let leaseToken = "";
     let player = null;
+    let realtimeClient = null;
+    let realtimeChannel = null;
+    let roomId = "";
+    let playerControl = { volume: 50, ai_dj_enabled: true, auto_next: true };
+    let scheduleConfig = { enabled: true, stop_time: "12:25:00", timezone: "Asia/Bangkok" };
+    let schedulePaused = false;
+    const handledRemoteCommandIds = new Set();
     let playerReady = false;
     let prepared = null;
     let currentSong = null;
@@ -117,14 +126,96 @@
     let idlePollTimer = null;
     let announcingSongId = "";
     let pendingAnnouncementSongId = "";
+    let djRestoreVolume = null;
+    let configuredVolume = 50;
+    let autoNextEnabled = true;
     const announcedSongIds = new Set();
     const AI_DJ_KEY = `ymq_ai_dj_enabled_${ROOM_SLUG}`;
     const aiDjToggle = $("ai-dj-enabled");
     aiDjToggle.checked = localStorage.getItem(AI_DJ_KEY) !== "false";
-    aiDjToggle.addEventListener("change", () => {
-      localStorage.setItem(AI_DJ_KEY, String(aiDjToggle.checked));
-      if (!aiDjToggle.checked && "speechSynthesis" in window) window.speechSynthesis.cancel();
-    });
+
+    function setAiDjEnabled(enabled, persist = true) {
+      aiDjToggle.checked = Boolean(enabled);
+      if (persist) localStorage.setItem(AI_DJ_KEY, String(aiDjToggle.checked));
+      if (!aiDjToggle.checked) {
+        cancelDjSpeech();
+        pendingAnnouncementSongId = "";
+      }
+    }
+
+    aiDjToggle.addEventListener("change", () => setAiDjEnabled(aiDjToggle.checked));
+
+    function setConfiguredVolume(value) {
+      configuredVolume = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+      playerControl.volume = configuredVolume;
+      if (djRestoreVolume !== null) djRestoreVolume = configuredVolume;
+      if (playerReady && player?.setVolume) {
+        const output = announcingSongId ? Math.min(configuredVolume, 28) : configuredVolume;
+        try { player.setVolume(output); } catch (_) { /* Player may be unavailable during teardown. */ }
+      }
+    }
+
+    function applyPlayerControl(settings = {}) {
+      if (settings.volume !== undefined) setConfiguredVolume(settings.volume);
+      if (typeof settings.ai_dj_enabled === "boolean") {
+        playerControl.ai_dj_enabled = settings.ai_dj_enabled;
+        setAiDjEnabled(settings.ai_dj_enabled);
+      }
+      if (typeof settings.auto_next === "boolean") {
+        autoNextEnabled = settings.auto_next;
+        playerControl.auto_next = autoNextEnabled;
+      }
+      if (playerReady && player?.setVolume) setConfiguredVolume(configuredVolume);
+    }
+
+    function setScheduleConfig(value = {}) {
+      scheduleConfig = {
+        enabled: value.enabled !== false,
+        stop_time: String(value.stop_time || "12:25:00").slice(0, 5),
+        timezone: "Asia/Bangkok",
+      };
+      enforcePlaybackSchedule();
+    }
+
+    function isScheduleBlockedLocal() {
+      if (!scheduleConfig.enabled) return false;
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+      }).formatToParts(new Date());
+      const hour = parts.find((part) => part.type === "hour")?.value || "00";
+      const minute = parts.find((part) => part.type === "minute")?.value || "00";
+      return `${hour}:${minute}` >= scheduleConfig.stop_time;
+    }
+
+    function enforcePlaybackSchedule(force = false) {
+      if (!connected) return;
+      const blocked = force || isScheduleBlockedLocal();
+      if (!blocked) {
+        if (schedulePaused) {
+          schedulePaused = false;
+          // Keep manual start/queue-check available after midnight even if no song was active.
+          $("play-btn").disabled = false;
+          if (currentSong || prepared?.song) showStatus("พ้นช่วงเวลาหยุดเล่นแล้ว สามารถสั่งเล่นต่อจาก Admin ได้");
+          else showStatus("พ้นช่วงเวลาหยุดเล่นแล้ว สามารถเริ่มเล่นหรือเช็กคิวได้");
+        }
+        return;
+      }
+
+      const newlyPaused = !schedulePaused;
+      schedulePaused = true;
+      if (newlyPaused) {
+        cancelDjSpeech();
+        pendingAnnouncementSongId = "";
+      }
+      if (playerReady && currentSong && (newlyPaused || force)) {
+        try { player.pauseVideo(); } catch (_) { /* YouTube player may still be buffering. */ }
+        // A force pause can come from a heartbeat response that already updated
+        // the server. Do not send another heartbeat and create a request loop.
+        if (newlyPaused && !force) heartbeat("PAUSED");
+      }
+      showStatus(`หยุดเล่นทุกห้องตามเวลาที่กำหนด ${scheduleConfig.stop_time} น.`);
+      $("play-btn").disabled = true;
+    }
 
     const setConnection = (message) => { $("connection").textContent = message; };
     const showStatus = (message) => { $("player-status").textContent = message || ""; };
@@ -171,6 +262,7 @@
           events: {
             onReady: async (event) => {
               playerReady = true;
+              try { player.setVolume(configuredVolume); } catch (_) { /* Apply again on the next control update if not ready. */ }
               resolve(event.target);
               await prepareNext(false);
             },
@@ -200,10 +292,18 @@
         setConnection("เชื่อมต่อแล้ว • Lease 60 วินาที");
         $("connect-panel").hidden = true;
         $("play-panel").hidden = false;
-        showStatus("เชื่อมต่อสำเร็จ กำลังเตรียมเพลงตามลำดับคะแนนโหวต…");
+        showStatus("เชื่อมต่อสำเร็จ กำลังอ่านการตั้งค่า Player…");
+        const runtime = await api("getPlayerState", { device_id: deviceId, lease_token: leaseToken });
+        roomId = runtime.state?.room_id || "";
+        applyPlayerControl(runtime.player_control || {});
+        setScheduleConfig(runtime.global_schedule || {});
         await loadYouTubeAPI();
         await initYouTubePlayer();
+        if (runtime.schedule_blocked) enforcePlaybackSchedule(true);
+        await connectPlayerRealtime();
+        if (runtime.state?.remote_command_id) await handleRemoteCommand(runtime.state);
         startTimers();
+        enforcePlaybackSchedule();
       } catch (error) {
         $("connect-status").textContent = error.message;
         button.disabled = false;
@@ -214,6 +314,12 @@
       if (!connected || !leaseToken || !playerReady) return;
       try {
         const result = await api("playerClaimNext", { device_id: deviceId, lease_token: leaseToken });
+        if (result.schedule_blocked || isScheduleBlockedLocal()) {
+          prepared = null;
+          enforcePlaybackSchedule(Boolean(result.schedule_blocked));
+          showStatus(`หยุดเล่นตามตารางส่วนกลางเวลา ${scheduleConfig.stop_time} น. ทุกห้อง`);
+          return;
+        }
         prepared = result.result;
         const song = prepared?.song;
         if (!song) {
@@ -256,40 +362,107 @@
       return parts.join(" ");
     }
 
-    function speakDjAnnouncement(song) {
+    function cancelDjSpeech() {
+      if ("speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel(); } catch (_) { /* Speech engine may already be closed. */ }
+      }
+      announcingSongId = "";
+      if (djRestoreVolume !== null && playerReady && player?.setVolume) {
+        try { player.setVolume(configuredVolume); } catch (_) { /* Player may already be unavailable. */ }
+      }
+      djRestoreVolume = null;
+    }
+
+    async function waitForSpeechVoices(timeoutMs = 1400) {
+      if (!("speechSynthesis" in window)) return [];
+      const synth = window.speechSynthesis;
+      const initial = synth.getVoices();
+      if (initial.some((voice) => /premwadee/i.test(voice.name || ""))) return initial;
+      return await new Promise((resolve) => {
+        let settled = false;
+        const deadline = Date.now() + timeoutMs;
+        const finish = () => {
+          if (settled) return;
+          const current = synth.getVoices();
+          if (!current.some((voice) => /premwadee/i.test(voice.name || "")) && Date.now() < deadline) return;
+          settled = true;
+          synth.removeEventListener?.("voiceschanged", finish);
+          resolve(current);
+        };
+        synth.addEventListener?.("voiceschanged", finish, { once: true });
+        setTimeout(finish, timeoutMs);
+      });
+    }
+
+    function chooseThaiFemaleVoice(voices) {
+      const thai = voices.filter((voice) => /^th[-_]/i.test(voice.lang || ""));
+      // Microsoft Edge Online TTS normally exposes this voice as
+      // "Microsoft Premwadee Online (Natural) - Thai (Thailand)".
+      return thai.find((voice) => /premwadee/i.test(voice.name || ""))
+        || thai.find((voice) => /female|woman|kanya|narisa|pim/i.test(voice.name || ""))
+        || thai[0]
+        || null;
+    }
+
+    async function speakDjAnnouncement(song) {
       if (!aiDjToggle.checked || !("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) return;
       if (announcedSongIds.has(song.id)) return;
       announcedSongIds.add(song.id);
       announcingSongId = song.id;
-      showStatus("AI DJ กำลังประกาศพร้อมกับเสียงเพลง…");
+      showStatus("AI DJ กำลังเลือกเสียงผู้ประกาศภาษาไทย…");
       try {
-        window.speechSynthesis.cancel();
+        const voices = await waitForSpeechVoices();
+        if (!aiDjToggle.checked || !connected || currentSong?.id !== song.id || announcingSongId !== song.id) return;
+        const voice = chooseThaiFemaleVoice(voices);
         const utterance = new SpeechSynthesisUtterance(buildDjAnnouncement(song));
-        utterance.lang = "th-TH";
-        utterance.rate = 0.92;
-        utterance.pitch = 1.08;
+        utterance.lang = voice?.lang || "th-TH";
+        utterance.rate = 0.94;
+        utterance.pitch = 1.02;
         utterance.volume = 1;
-        const voices = window.speechSynthesis.getVoices();
-        const thaiVoices = voices.filter((voice) => /^th(-|_)/i.test(voice.lang || ""));
-        const femaleVoice = thaiVoices.find((voice) => /female|woman|kanya|premwadee|narisa|pim|siri/i.test(voice.name || ""));
-        if (femaleVoice || thaiVoices[0]) utterance.voice = femaleVoice || thaiVoices[0];
+        if (voice) utterance.voice = voice;
+
+        // Lower the music while the announcer speaks, then restore the prior level.
+        djRestoreVolume = configuredVolume;
+        if (playerReady && player?.setVolume) {
+          try { player.setVolume(Math.min(configuredVolume, 28)); } catch (_) { /* Keep original music level if unavailable. */ }
+        }
+
         const finish = () => {
-          if (announcingSongId === song.id) {
-            announcingSongId = "";
-            if (currentSong?.id === song.id && playerReady && player.getPlayerState() === YT.PlayerState.PLAYING) {
-              showStatus("กำลังเล่นเพลง");
-            }
+          if (announcingSongId !== song.id) return;
+          announcingSongId = "";
+          if (djRestoreVolume !== null && playerReady && player?.setVolume) {
+            try { player.setVolume(configuredVolume); } catch (_) { /* Player may already be unavailable. */ }
+          }
+          djRestoreVolume = null;
+          if (currentSong?.id === song.id && playerReady && player.getPlayerState() === YT.PlayerState.PLAYING) {
+            showStatus("กำลังเล่นเพลง");
           }
         };
         utterance.onend = finish;
         utterance.onerror = finish;
+        const voiceLabel = voice?.name || "เสียงภาษาไทยเริ่มต้นของเบราว์เซอร์";
+        const hasPremwadee = Boolean(voice && /premwadee/i.test(voice.name || ""));
+        showStatus(hasPremwadee
+          ? `AI DJ กำลังประกาศด้วยเสียง Premwadee Online พร้อมเสียงเพลง…`
+          : `ไม่พบเสียง Premwadee Online — กำลังใช้ ${voiceLabel} แทน`);
+        window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
-      } catch (_) {
+      } catch (error) {
+        console.warn("SpeechSynthesis unavailable:", error);
         if (announcingSongId === song.id) announcingSongId = "";
+        if (djRestoreVolume !== null && playerReady && player?.setVolume) {
+          try { player.setVolume(configuredVolume); } catch (_) { /* Ignore restoration errors. */ }
+        }
+        djRestoreVolume = null;
+        showStatus("เบราว์เซอร์ไม่สามารถเรียกใช้เสียงพูดได้ เพลงยังเล่นต่อได้ตามปกติ");
       }
     }
 
     async function loadPreparedSong() {
+      if (isScheduleBlockedLocal()) {
+        enforcePlaybackSchedule();
+        return;
+      }
       if (!playerReady || !prepared?.song) {
         if (!currentSong) prepareNext(false);
         else player?.playVideo();
@@ -299,19 +472,24 @@
       const startSeconds = Math.max(0, Number(prepared.position) || 0);
       const shouldAnnounce = !prepared.recovered && startSeconds < 3;
       prepared = null;
+      cancelDjSpeech();
       currentSong = song;
       pendingAnnouncementSongId = shouldAnnounce ? song.id : "";
       $("play-btn").disabled = true;
       if (!connected || currentSong?.id !== song.id) return;
+      // Music starts immediately. The browser's online neural voice is triggered
+      // from the YouTube PLAYING event so both audios overlap.
       player.loadVideoById({ videoId: song.video_id, startSeconds });
-      showStatus(shouldAnnounce ? "กำลังเริ่มเพลงและ AI DJ…" : "กำลังส่งเพลงไปยัง YouTube Player…");
+      showStatus(shouldAnnounce ? "กำลังเริ่มเพลงพร้อมเสียง AI DJ…" : "กำลังส่งเพลงไปยัง YouTube Player…");
     }
 
     async function handlePlayerState(event) {
       if (!currentSong || !connected) return;
       if (event.data === YT.PlayerState.PLAYING) {
         showStatus("กำลังเล่นเพลง");
-        if (pendingAnnouncementSongId === currentSong.id) {
+        if ("speechSynthesis" in window && window.speechSynthesis.paused && announcingSongId === currentSong.id) {
+          window.speechSynthesis.resume();
+        } else if (pendingAnnouncementSongId === currentSong.id) {
           pendingAnnouncementSongId = "";
           speakDjAnnouncement(currentSong);
         }
@@ -320,20 +498,20 @@
         $("skip-btn").disabled = false;
         heartbeat("PLAYING");
       } else if (event.data === YT.PlayerState.PAUSED) {
+        if ("speechSynthesis" in window && window.speechSynthesis.speaking) window.speechSynthesis.pause();
         showStatus("หยุดพักเพลงชั่วคราว");
         $("play-btn").textContent = "เล่นต่อ";
         $("play-btn").disabled = false;
         heartbeat("PAUSED");
       } else if (event.data === YT.PlayerState.ENDED) {
-        await finishAndContinue("ENDED", true);
+        await finishAndContinue("ENDED", autoNextEnabled && !isScheduleBlockedLocal());
       }
     }
 
     async function finishAndContinue(reason, autoplay) {
       if (advancing || !currentSong || !connected) return;
       advancing = true;
-      if (announcingSongId && "speechSynthesis" in window) window.speechSynthesis.cancel();
-      announcingSongId = "";
+      cancelDjSpeech();
       pendingAnnouncementSongId = "";
       const finishedId = currentSong.id;
       try {
@@ -369,6 +547,8 @@
         lease_token: leaseToken,
         player_status: status || (currentSong ? "PLAYING" : "IDLE"),
         position,
+      }).then((result) => {
+        if (result.schedule_blocked) enforcePlaybackSchedule(true);
       }).catch((error) => {
         showStatus(error.message);
         if (error.message.includes("Lease หมดอายุ")) {
@@ -387,6 +567,7 @@
         heartbeat(state);
       }, 15000);
       progressTimer = setInterval(() => {
+        enforcePlaybackSchedule();
         if (!playerReady || !currentSong) return;
         const current = player.getCurrentTime() || 0;
         const total = player.getDuration() || currentSong.duration_seconds || 0;
@@ -400,8 +581,70 @@
       }, 15000);
     }
 
+    async function handleRemoteCommand(state) {
+      const commandId = String(state?.remote_command_id || "");
+      const command = String(state?.remote_command || "").toUpperCase();
+      const payload = state?.remote_command_payload || {};
+      if (!commandId || !command || !connected || !leaseToken || handledRemoteCommandIds.has(commandId)) return;
+      handledRemoteCommandIds.add(commandId);
+      try {
+        if (command === "PLAY") {
+          if (isScheduleBlockedLocal()) { enforcePlaybackSchedule(); }
+          else if (prepared?.song) await loadPreparedSong();
+          else if (currentSong && playerReady) player.playVideo();
+          else await prepareNext(true);
+        } else if (command === "PAUSE") {
+          if (playerReady && currentSong) player.pauseVideo();
+          heartbeat("PAUSED");
+          showStatus("ได้รับคำสั่งพักเพลงจากผู้ดูแล");
+        } else if (command === "SKIP") {
+          if (currentSong) await finishAndContinue("SKIPPED", !isScheduleBlockedLocal());
+          else await prepareNext(false);
+        } else if (command === "SET_VOLUME") {
+          setConfiguredVolume(payload.volume);
+          showStatus(`ผู้ดูแลปรับระดับเสียงเป็น ${configuredVolume}%`);
+        } else if (command === "SYNC_SETTINGS") {
+          applyPlayerControl(payload);
+          showStatus("รับการตั้งค่า Player จากผู้ดูแลแล้ว");
+        }
+      } catch (error) {
+        showStatus(`รับคำสั่งจากผู้ดูแลไม่สำเร็จ: ${error.message}`);
+      } finally {
+        try {
+          await api("playerAckControl", { device_id: deviceId, lease_token: leaseToken, command_id: commandId });
+        } catch (error) {
+          console.warn("Player command acknowledgement failed:", error);
+        }
+      }
+    }
+
+    async function connectPlayerRealtime() {
+      if (!roomId || realtimeChannel) return;
+      realtimeClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      realtimeChannel = realtimeClient.channel(`player-control-${roomId}`)
+        .on("postgres_changes", {
+          event: "UPDATE", schema: "public", table: "player_public_state", filter: `room_id=eq.${roomId}`,
+        }, (payload) => { void handleRemoteCommand(payload.new); })
+        .on("postgres_changes", {
+          event: "UPDATE", schema: "public", table: "global_playback_settings", filter: "id=eq.true",
+        }, (payload) => { setScheduleConfig(payload.new || {}); })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            // Re-read after reconnect so a remote command sent while offline is not missed.
+            api("getPlayerState").then((runtime) => {
+              setScheduleConfig(runtime.global_schedule || {});
+              if (runtime.player_control) applyPlayerControl(runtime.player_control);
+              if (runtime.state?.remote_command_id) void handleRemoteCommand(runtime.state);
+            }).catch((error) => console.warn("Unable to refresh remote Player state:", error));
+          }
+        });
+    }
+
     $("connect-btn").addEventListener("click", connectPlayer);
     $("play-btn").addEventListener("click", () => {
+      if (isScheduleBlockedLocal()) { enforcePlaybackSchedule(); return; }
       if (prepared?.song) loadPreparedSong();
       else if (currentSong && playerReady) player.playVideo();
       else prepareNext(false);
@@ -428,12 +671,15 @@
       } catch (_) { /* The lease will expire automatically if the release request cannot reach the server. */ }
       connected = false;
       leaseToken = "";
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-      announcingSongId = "";
+      cancelDjSpeech();
       pendingAnnouncementSongId = "";
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (progressTimer) clearInterval(progressTimer);
       if (idlePollTimer) clearInterval(idlePollTimer);
+      if (realtimeClient && realtimeChannel) {
+        realtimeClient.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+      }
       setConnection("ปลดการควบคุมแล้ว");
       $("play-panel").hidden = true;
       $("connect-panel").hidden = false;
@@ -442,14 +688,30 @@
     });
 
     window.addEventListener("beforeunload", () => {
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      cancelDjSpeech();
+    });
+
+    window.addEventListener("focus", () => {
+      enforcePlaybackSchedule();
+      if (connected) heartbeat();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        enforcePlaybackSchedule();
+        if (connected) heartbeat();
+      }
     });
 
     async function loadPublicStatus() {
       try {
         const result = await api("getPlayerState");
         const songText = result.song ? `เพลงปัจจุบัน: ${result.song.title}` : "ยังไม่มีเพลงกำลังเล่น";
-        $("public-status").textContent = `${songText} • สถานะ ${result.state.status} • อัปเดต ${new Date(result.state.updated_at).toLocaleTimeString("th-TH")}`;
+        if (!connected) {
+          if (result.player_control) applyPlayerControl(result.player_control);
+          if (result.global_schedule) setScheduleConfig(result.global_schedule);
+        }
+        const scheduleText = result.schedule_blocked ? ` • หยุดตามตาราง ${String(result.global_schedule?.stop_time || "12:25").slice(0, 5)} น.` : "";
+        $("public-status").textContent = `${songText} • สถานะ ${result.state.status} • อัปเดต ${new Date(result.state.updated_at).toLocaleTimeString("th-TH")}${scheduleText}`;
       } catch (error) {
         $("public-status").textContent = error.message;
       }

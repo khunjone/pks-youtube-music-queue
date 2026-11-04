@@ -30,12 +30,23 @@
       <button id="start-session">เข้าสู่ห้องเพลง</button>
     </section>
     <section id="app-panel" hidden>
-      <section class="panel">
-        <h2>ค้นหาเพลงจาก YouTube</h2>
-        <form id="search-form"><input id="query" placeholder="ชื่อเพลงหรือศิลปิน" minlength="2" required><button>ค้นหา</button></form>
-        <label>ฝากเพลงถึง (ไม่บังคับ)<input id="recipient" maxlength="50" placeholder="ชื่อผู้รับ"></label>
-        <label>ข้อความฝากเพลง (ไม่บังคับ)<input id="message" maxlength="200" placeholder="พิมพ์ข้อความถึงผู้รับ"></label>
-        <div id="search-results"></div>
+      <section class="panel search-panel">
+        <div class="search-heading">
+          <div><p class="eyebrow">YOUTUBE MUSIC SEARCH</p><h2>ค้นหาเพลงที่คุณชอบ</h2><p class="muted">พิมพ์ชื่อเพลงหรือศิลปิน แล้วเลือกเพลงเพื่อฝากเข้าคิว</p></div>
+          <span class="search-symbol" aria-hidden="true">♫</span>
+        </div>
+        <form id="search-form" class="search-form">
+          <label class="search-input-wrap" for="query"><span aria-hidden="true">⌕</span><input id="query" placeholder="ค้นหาชื่อเพลงหรือศิลปิน…" minlength="2" autocomplete="off" required></label>
+          <button id="search-button" class="search-button" type="submit"><span aria-hidden="true">⌕</span> ค้นหาเพลง</button>
+        </form>
+        <details class="dedication-details">
+          <summary>เพิ่มข้อความฝากเพลง <span>(ไม่บังคับ)</span></summary>
+          <div class="dedication-fields">
+            <label>ฝากถึง<input id="recipient" maxlength="50" placeholder="ชื่อผู้รับเพลง"></label>
+            <label>ข้อความฝากเพลง<input id="message" maxlength="200" placeholder="เขียนข้อความสั้น ๆ ถึงผู้รับ"></label>
+          </div>
+        </details>
+        <div id="search-results" aria-live="polite"></div>
       </section>
       <section class="panel">
         <h2>คิวเพลง <small>เรียงตามคะแนนโหวตสูงสุด</small></h2>
