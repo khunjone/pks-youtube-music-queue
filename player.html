@@ -45,8 +45,7 @@
       <span class="brand-copy"><strong>เสียงตามสาย...โป่งก้อนเส้า</strong><small>ศูนย์ควบคุมเครื่องเล่น</small></span>
     </a>
     <nav class="header-nav" aria-label="เมนูหลัก">
-      <span id="room-label" class="connection-pill">ห้อง: one</span>
-      <a class="nav-link" href="./rooms.html">เลือกห้องเพลง</a>
+      <span id="room-label" class="connection-pill">ห้องเพลงหลัก</span>
       <span id="connection" class="connection-pill">ยังไม่ได้เชื่อมต่อ</span>
     </nav>
   </header>
@@ -85,10 +84,15 @@
       <p class="muted">หมายเหตุ: เมื่อเชื่อมต่อเครื่องเล่นแล้ว หากเพลงไม่เริ่ม ให้กด “เริ่มเล่นเพลง” หรือปุ่มเล่นบน YouTube Player หนึ่งครั้ง</p>
     </section>
 
+    <section class="panel" id="player-queue-panel">
+      <div class="section-head"><div><p class="eyebrow">UP NEXT</p><h2 style="margin:0">คิวเพลงที่รอเล่น</h2><p class="muted" style="margin:4px 0 0">รายการและลำดับคิวอัปเดตแบบเรียลไทม์</p></div><span class="connection-pill" id="player-queue-count">0 เพลง</span></div>
+      <div id="player-queue-list" class="list" aria-live="polite"><div class="empty">กำลังโหลดคิวเพลง…</div></div>
+    </section>
+
     <section class="panel">
       <strong>สถานะห้องเพลง</strong>
       <p class="muted">Player ใช้ Lease ครั้งละ 60 วินาทีและต่ออายุทุก 15 วินาที ผู้ดูแลสามารถสั่งเล่น พัก ข้ามเพลง ปรับเสียง และตั้งค่า AI DJ จากหน้า Admin ได้</p>
-      <p class="muted">เมื่อถึงเวลาหยุดส่วนกลาง Player ทุกห้องจะพักเพลงตามเวลาไทย และจะไม่เล่นเพลงถัดไปจนกว่าผู้ดูแลจะสั่งเล่นอีกครั้ง</p>
+      <p class="muted">Player จะเริ่มเล่นอัตโนมัติ 11:40 น. และหยุด 12:25 น. ตามเวลาไทย</p>
       <p id="public-status" class="status">กำลังอ่านสถานะ…</p>
     </section>
   </main>
@@ -98,8 +102,9 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./assets/config.js";
 
     const $ = (id) => document.getElementById(id);
-    const ROOM_SLUG = (new URLSearchParams(location.search).get("room") || "one").trim().toLowerCase();
+    const ROOM_SLUG = "one";
     const DEVICE_KEY = `ymq_player_device_id_${ROOM_SLUG}`;
+    const PLAYER_SESSION_KEY = `ymq_player_session_${ROOM_SLUG}`;
     const getDeviceId = () => {
       let value = localStorage.getItem(DEVICE_KEY);
       if (!value) {
@@ -117,7 +122,10 @@
     let realtimeChannel = null;
     let roomId = "";
     let playerControl = { volume: 50, ai_dj_enabled: true, auto_next: true };
-    let scheduleConfig = { enabled: true, stop_time: "12:25:00", timezone: "Asia/Bangkok" };
+    let scheduleConfig = { enabled: true, start_time: "11:40:00", stop_time: "12:25:00", timezone: "Asia/Bangkok" };
+    let lastScheduleBlocked = null;
+    let queueRefreshTimer = null;
+    let autoStartPending = false;
     let schedulePaused = false;
     const handledRemoteCommandIds = new Set();
     let playerReady = false;
@@ -175,6 +183,7 @@
     function setScheduleConfig(value = {}) {
       scheduleConfig = {
         enabled: value.enabled !== false,
+        start_time: String(value.start_time || "11:40:00").slice(0, 5),
         stop_time: String(value.stop_time || "12:25:00").slice(0, 5),
         timezone: "Asia/Bangkok",
       };
@@ -188,7 +197,8 @@
       }).formatToParts(new Date());
       const hour = parts.find((part) => part.type === "hour")?.value || "00";
       const minute = parts.find((part) => part.type === "minute")?.value || "00";
-      return `${hour}:${minute}` >= scheduleConfig.stop_time;
+      const current = `${hour}:${minute}`;
+      return current < scheduleConfig.start_time || current >= scheduleConfig.stop_time;
     }
 
     function enforcePlaybackSchedule(force = false) {
@@ -217,7 +227,8 @@
         // the server. Do not send another heartbeat and create a request loop.
         if (newlyPaused && !force) heartbeat("PAUSED");
       }
-      showStatus(`หยุดเล่นทุกห้องตามเวลาที่กำหนด ${scheduleConfig.stop_time} น.`);
+      const now = new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+      showStatus(now < scheduleConfig.start_time ? `รอเวลาเริ่มเล่น ${scheduleConfig.start_time} น.` : `หยุดเล่นตามตารางเวลา ${scheduleConfig.stop_time} น.`);
       $("play-btn").disabled = true;
     }
 
@@ -284,14 +295,42 @@
       });
     }
 
-    async function connectPlayer() {
-      const button = $("connect-btn");
-      button.disabled = true;
-      $("connect-status").textContent = "กำลังตรวจสอบรหัสและเชื่อมต่อ…";
+    function renderPlayerQueue(songs = []) {
+      const root = $("player-queue-list");
+      root.replaceChildren();
+      $("player-queue-count").textContent = `${songs.length} เพลง`;
+      if (!songs.length) {
+        const empty = document.createElement("div"); empty.className = "empty";
+        empty.textContent = "ยังไม่มีเพลงในคิว เมื่อมีผู้ฝากเพลง รายการจะแสดงที่นี่อัตโนมัติ";
+        root.append(empty); return;
+      }
+      songs.forEach((song, index) => {
+        const row = document.createElement("article"); row.className = "item player-queue-item";
+        const number = document.createElement("strong"); number.className = "queue-number"; number.textContent = String(index + 1);
+        const main = document.createElement("div"); main.className = "item-main";
+        const title = document.createElement("div"); title.className = "item-title"; title.textContent = song.title || "เพลงไม่ระบุชื่อ";
+        const meta = document.createElement("div"); meta.className = "item-meta";
+        const details = [`ผู้ฝาก ${song.submitted_by || "-"}`, `${Number(song.vote_count || 0)} โหวต`];
+        if (song.recipient) details.push(`ฝากถึง ${song.recipient}`);
+        if (song.message) details.push(song.message);
+        meta.textContent = details.join(" · ");
+        main.append(title, meta); row.append(number, main);
+        if (index === 0) { const badge = document.createElement("span"); badge.className = "tag"; badge.textContent = "เพลงถัดไป"; row.append(badge); }
+        root.append(row);
+      });
+    }
+
+    async function refreshPlayerQueue() {
+      if (!connected || !leaseToken) return;
       try {
-        const playerCode = $("player-code").value;
-        const result = await api("playerAcquire", { player_code: playerCode, device_id: deviceId });
-        leaseToken = result.lease_token;
+        const result = await api("playerGetQueue", { device_id: deviceId, lease_token: leaseToken });
+        renderPlayerQueue(result.songs || []);
+      } catch (error) { console.warn("Unable to refresh Player queue:", error); }
+    }
+
+    async function activatePlayerSession(token) {
+        leaseToken = token;
+        localStorage.setItem(PLAYER_SESSION_KEY, token);
         connected = true;
         setConnection("เชื่อมต่อแล้ว • Lease 60 วินาที");
         $("connect-panel").hidden = true;
@@ -305,11 +344,39 @@
         await initYouTubePlayer();
         if (runtime.schedule_blocked) enforcePlaybackSchedule(true);
         await connectPlayerRealtime();
+        await refreshPlayerQueue();
         if (runtime.state?.remote_command_id) await handleRemoteCommand(runtime.state);
         startTimers();
         enforcePlaybackSchedule();
+        maybeAutoStart();
+    }
+
+    async function connectPlayer() {
+      const button = $("connect-btn");
+      button.disabled = true;
+      $("connect-status").textContent = "กำลังตรวจสอบรหัสและเชื่อมต่อ…";
+      try {
+        const playerCode = $("player-code").value;
+        const result = await api("playerAcquire", { player_code: playerCode, device_id: deviceId });
+        await activatePlayerSession(result.lease_token);
       } catch (error) {
         $("connect-status").textContent = error.message;
+        button.disabled = false;
+      }
+    }
+
+    async function resumeSavedPlayerSession() {
+      const savedToken = localStorage.getItem(PLAYER_SESSION_KEY);
+      if (!savedToken) return;
+      const button = $("connect-btn");
+      button.disabled = true;
+      $("connect-status").textContent = "กำลังกู้คืน Session ของ Player…";
+      try {
+        const result = await api("playerResume", { device_id: deviceId, lease_token: savedToken });
+        await activatePlayerSession(result.lease_token);
+      } catch (error) {
+        localStorage.removeItem(PLAYER_SESSION_KEY);
+        $("connect-status").textContent = `กู้คืน Session ไม่สำเร็จ: ${error.message} กรุณากรอกรหัส Player ใหม่`;
         button.disabled = false;
       }
     }
@@ -321,7 +388,7 @@
         if (result.schedule_blocked || isScheduleBlockedLocal()) {
           prepared = null;
           enforcePlaybackSchedule(Boolean(result.schedule_blocked));
-          showStatus(`หยุดเล่นตามตารางส่วนกลางเวลา ${scheduleConfig.stop_time} น. ทุกห้อง`);
+          showStatus(`รอช่วงเวลาเล่น ${scheduleConfig.start_time}–${scheduleConfig.stop_time} น. ตามเวลาไทย`);
           return;
         }
         prepared = result.result;
@@ -562,6 +629,12 @@
       });
     }
 
+    function maybeAutoStart() {
+      if (!connected || !playerReady || isScheduleBlockedLocal() || currentSong || prepared || advancing || autoStartPending) return;
+      autoStartPending = true;
+      prepareNext(true).finally(() => { autoStartPending = false; });
+    }
+
     function startTimers() {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (progressTimer) clearInterval(progressTimer);
@@ -571,7 +644,14 @@
         heartbeat(state);
       }, 15000);
       progressTimer = setInterval(() => {
-        enforcePlaybackSchedule();
+        const blockedNow = isScheduleBlockedLocal();
+        if (lastScheduleBlocked === null) lastScheduleBlocked = blockedNow;
+        if (lastScheduleBlocked && !blockedNow) {
+          schedulePaused = false;
+          maybeAutoStart();
+        }
+        if (!lastScheduleBlocked && blockedNow) enforcePlaybackSchedule();
+        lastScheduleBlocked = blockedNow;
         if (!playerReady || !currentSong) return;
         const current = player.getCurrentTime() || 0;
         const total = player.getDuration() || currentSong.duration_seconds || 0;
@@ -581,7 +661,8 @@
         $("progress").value = Math.min(current, total || current);
       }, 1000);
       idlePollTimer = setInterval(() => {
-        if (connected && !currentSong && !prepared && !advancing) prepareNext(false);
+        maybeAutoStart();
+        refreshPlayerQueue();
       }, 15000);
     }
 
@@ -629,6 +710,9 @@
       });
       realtimeChannel = realtimeClient.channel(`player-control-${roomId}`)
         .on("postgres_changes", {
+          event: "*", schema: "public", table: "queue_signals", filter: `room_slug=eq.${ROOM_SLUG}`,
+        }, () => { void refreshPlayerQueue(); maybeAutoStart(); })
+        .on("postgres_changes", {
           event: "UPDATE", schema: "public", table: "player_public_state", filter: `room_id=eq.${roomId}`,
         }, (payload) => { void handleRemoteCommand(payload.new); })
         .on("postgres_changes", {
@@ -641,6 +725,7 @@
               setScheduleConfig(runtime.global_schedule || {});
               if (runtime.player_control) applyPlayerControl(runtime.player_control);
               if (runtime.state?.remote_command_id) void handleRemoteCommand(runtime.state);
+              void refreshPlayerQueue();
             }).catch((error) => console.warn("Unable to refresh remote Player state:", error));
           }
         });
@@ -675,11 +760,13 @@
       } catch (_) { /* The lease will expire automatically if the release request cannot reach the server. */ }
       connected = false;
       leaseToken = "";
+      localStorage.removeItem(PLAYER_SESSION_KEY);
       cancelDjSpeech();
       pendingAnnouncementSongId = "";
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (progressTimer) clearInterval(progressTimer);
       if (idlePollTimer) clearInterval(idlePollTimer);
+      if (queueRefreshTimer) clearInterval(queueRefreshTimer);
       if (realtimeClient && realtimeChannel) {
         realtimeClient.removeChannel(realtimeChannel);
         realtimeChannel = null;
@@ -714,7 +801,7 @@
           if (result.player_control) applyPlayerControl(result.player_control);
           if (result.global_schedule) setScheduleConfig(result.global_schedule);
         }
-        const scheduleText = result.schedule_blocked ? ` • หยุดตามตาราง ${String(result.global_schedule?.stop_time || "12:25").slice(0, 5)} น.` : "";
+        const scheduleText = result.schedule_blocked ? ` • ช่วงเวลาเล่น ${String(result.global_schedule?.start_time || "11:40").slice(0, 5)}–${String(result.global_schedule?.stop_time || "12:25").slice(0, 5)} น.` : "";
         $("public-status").textContent = `${songText} • สถานะ ${result.state.status} • อัปเดต ${new Date(result.state.updated_at).toLocaleTimeString("th-TH")}${scheduleText}`;
       } catch (error) {
         $("public-status").textContent = error.message;
@@ -722,6 +809,7 @@
     }
     loadPublicStatus();
     setInterval(loadPublicStatus, 15000);
+    resumeSavedPlayerSession();
   </script>
   <script type="module" src="./assets/room-theme.js"></script>
 </body>
