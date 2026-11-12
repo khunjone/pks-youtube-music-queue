@@ -136,6 +136,9 @@
     let heartbeatTimer = null;
     let progressTimer = null;
     let idlePollTimer = null;
+    let remotePollTimer = null;
+    let playbackAutoplayBlocked = false;
+    const processingRemoteCommandIds = new Set();
     let announcingSongId = "";
     let pendingAnnouncementSongId = "";
     let djRestoreVolume = null;
@@ -181,13 +184,23 @@
     }
 
     function setScheduleConfig(value = {}) {
+      const wasBlocked = lastScheduleBlocked === null ? isScheduleBlockedLocal() : lastScheduleBlocked;
       scheduleConfig = {
         enabled: value.enabled !== false,
         start_time: String(value.start_time || "11:40:00").slice(0, 5),
         stop_time: String(value.stop_time || "12:25:00").slice(0, 5),
         timezone: "Asia/Bangkok",
       };
-      enforcePlaybackSchedule();
+      const blockedNow = isScheduleBlockedLocal();
+      lastScheduleBlocked = blockedNow;
+      if (blockedNow) {
+        enforcePlaybackSchedule();
+      } else {
+        if (schedulePaused || wasBlocked) {
+          schedulePaused = false;
+          if (connected && playerReady) maybeAutoStart();
+        }
+      }
     }
 
     function isScheduleBlockedLocal() {
@@ -275,11 +288,14 @@
           height: "100%",
           playerVars: { autoplay: 0, controls: 1, playsinline: 1, rel: 0, enablejsapi: 1 },
           events: {
-            onReady: async (event) => {
+            onReady: (event) => {
               playerReady = true;
               try { player.setVolume(configuredVolume); } catch (_) { /* Apply again on the next control update if not ready. */ }
               resolve(event.target);
-              await prepareNext(false);
+              // Claiming a song with prepareNext(false) here left currentSong set
+              // without starting playback; maybeAutoStart then skipped the song.
+              // Use one path that both claims and starts when the schedule is open.
+              maybeAutoStart();
             },
             onStateChange: handlePlayerState,
             onError: () => {
@@ -287,7 +303,9 @@
               finishAndContinue("ERROR", true);
             },
             onAutoplayBlocked: () => {
-              showStatus("เบราว์เซอร์บล็อกการเล่นอัตโนมัติ กรุณากดปุ่มเริ่มเล่นเพลง");
+              playbackAutoplayBlocked = true;
+              showStatus("เบราว์เซอร์บล็อกเสียงอัตโนมัติ กรุณากดปุ่ม ‘เริ่มเล่นเพลง’ บนเครื่อง Player 1 ครั้ง เพื่ออนุญาตเสียง");
+              $("play-btn").textContent = "แตะเพื่ออนุญาตเสียง / เริ่มเล่น";
               $("play-btn").disabled = false;
             },
           },
@@ -557,6 +575,7 @@
     async function handlePlayerState(event) {
       if (!currentSong || !connected) return;
       if (event.data === YT.PlayerState.PLAYING) {
+        playbackAutoplayBlocked = false;
         showStatus("กำลังเล่นเพลง");
         if ("speechSynthesis" in window && window.speechSynthesis.paused && announcingSongId === currentSong.id) {
           window.speechSynthesis.resume();
@@ -639,6 +658,7 @@
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (progressTimer) clearInterval(progressTimer);
       if (idlePollTimer) clearInterval(idlePollTimer);
+      if (remotePollTimer) clearInterval(remotePollTimer);
       heartbeatTimer = setInterval(() => {
         const state = playerReady && player.getPlayerState() === YT.PlayerState.PAUSED ? "PAUSED" : (currentSong ? "PLAYING" : "IDLE");
         heartbeat(state);
@@ -663,7 +683,10 @@
       idlePollTimer = setInterval(() => {
         maybeAutoStart();
         refreshPlayerQueue();
-      }, 15000);
+      }, 10000);
+      // Realtime is the fast path; polling guarantees Admin commands still arrive
+      // when a browser/network temporarily drops a Postgres Changes event.
+      remotePollTimer = setInterval(() => { void pollRemoteControl(); }, 5000);
     }
 
     async function handleRemoteCommand(state) {
@@ -720,6 +743,26 @@
       }
     }
 
+    async function pollRemoteControl() {
+      if (!connected || !leaseToken || !deviceId) return;
+      try {
+        const runtime = await api("getPlayerState", { device_id: deviceId, lease_token: leaseToken });
+        if (runtime.global_schedule) setScheduleConfig(runtime.global_schedule);
+        if (runtime.player_control) applyPlayerControl(runtime.player_control);
+        if (runtime.state?.remote_command_id) await handleRemoteCommand(runtime.state);
+        // Also recover an automatic start after a background tab/browser wake-up.
+        if (!isScheduleBlockedLocal()) maybeAutoStart();
+      } catch (error) {
+        if (String(error.message || "").includes("Lease หมดอายุ")) {
+          connected = false;
+          setConnection("การเชื่อมต่อหมดอายุ");
+          showStatus("Session ของ Player หมดอายุ กรุณาเชื่อมต่อใหม่");
+        } else {
+          console.warn("Player control polling failed:", error);
+        }
+      }
+    }
+
     async function connectPlayerRealtime() {
       if (!roomId || realtimeChannel) return;
       realtimeClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -751,9 +794,10 @@
     $("connect-btn").addEventListener("click", connectPlayer);
     $("play-btn").addEventListener("click", () => {
       if (isScheduleBlockedLocal()) { enforcePlaybackSchedule(); return; }
+      playbackAutoplayBlocked = false;
       if (prepared?.song) loadPreparedSong();
       else if (currentSong && playerReady) player.playVideo();
-      else prepareNext(false);
+      else prepareNext(true);
     });
     $("pause-btn").addEventListener("click", () => {
       if (playerReady && currentSong) {
@@ -783,6 +827,7 @@
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (progressTimer) clearInterval(progressTimer);
       if (idlePollTimer) clearInterval(idlePollTimer);
+      if (remotePollTimer) clearInterval(remotePollTimer);
       if (queueRefreshTimer) clearInterval(queueRefreshTimer);
       if (realtimeClient && realtimeChannel) {
         realtimeClient.removeChannel(realtimeChannel);
@@ -801,12 +846,20 @@
 
     window.addEventListener("focus", () => {
       enforcePlaybackSchedule();
-      if (connected) heartbeat();
+      if (connected) {
+        heartbeat();
+        void pollRemoteControl();
+        maybeAutoStart();
+      }
     });
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         enforcePlaybackSchedule();
-        if (connected) heartbeat();
+        if (connected) {
+          heartbeat();
+          void pollRemoteControl();
+          maybeAutoStart();
+        }
       }
     });
 

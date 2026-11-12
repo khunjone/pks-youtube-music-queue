@@ -78,7 +78,8 @@
           <label class="check"><input id="remote-auto-next" type="checkbox" checked> เล่นเพลงถัดไปอัตโนมัติ</label>
         </div>
         <div class="actions"><button type="button" id="save-remote-settings">บันทึกการตั้งค่า Player</button></div>
-        <p class="muted">คำสั่งส่งผ่าน Supabase Realtime ไปยัง Player ของห้องนี้ ควรเปิดหน้า Player ค้างไว้ หาก Player ออฟไลน์ ระบบเก็บคำสั่งล่าสุดไว้จนกว่าเครื่องเล่นจะเชื่อมต่อใหม่ (คำสั่งใหม่จะแทนที่คำสั่งที่ยังไม่ถูกประมวลผล)</p>
+        <p class="muted">คำสั่งส่งไปยัง Player ผ่าน Supabase Realtime พร้อมตรวจสอบซ้ำทุก 5 วินาที หากสัญญาณ Realtime ขาดช่วง Admin จะแสดงผลเมื่อ Player ตอบรับคำสั่งจริง ควรเปิดหน้า Player ค้างไว้และเชื่อมต่อ Session ให้เรียบร้อย</p>
+        <p class="muted warning">หมายเหตุ: คำสั่งเล่นเพลงยังทำงานเฉพาะช่วงเวลาที่กำหนด (ค่าเริ่มต้น 11:40–12:25 น. เวลาไทย) นอกช่วงเวลาดังกล่าวระบบจะปฏิเสธคำสั่งเล่นตามตารางเวลา</p>
       </section>
 
       <section class="panel" id="global-schedule-panel">
@@ -241,6 +242,19 @@
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
       return result;
+    }
+
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    async function waitForPlayerCommandAck(commandId, timeoutMs = 9000) {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const runtime = await api("getPlayerState");
+        const pendingId = runtime.state?.remote_command_id || null;
+        if (pendingId !== commandId) return true;
+        await wait(700);
+      }
+      return false;
     }
 
     function showAdmin(role) {
@@ -430,8 +444,13 @@
       if (command === "SKIP" && !confirm("ยืนยันข้ามเพลงที่กำลังเล่นในห้องนี้?")) return;
       button.disabled = true;
       try {
-        await api("adminPlayerControl", { command });
-        say(`ส่งคำสั่ง ${command === "PLAY" ? "เล่นเพลง" : command === "PAUSE" ? "พักเพลง" : "ข้ามเพลง"} ไปยัง Player แล้ว`, true);
+        const sent = await api("adminPlayerControl", { command });
+        const acknowledged = await waitForPlayerCommandAck(sent.command_id);
+        if (acknowledged) {
+          say(`Player ตอบรับคำสั่ง${command === "PLAY" ? "เล่นเพลง" : command === "PAUSE" ? "พักเพลง" : "ข้ามเพลง"}แล้ว`, true);
+        } else {
+          say("ส่งคำสั่งแล้ว แต่ Player ยังไม่ตอบรับ ตรวจสอบว่า player.html เปิดอยู่และเชื่อมต่อ Session แล้ว");
+        }
       } catch (error) { say(error.message); }
       finally { button.disabled = false; }
     });
