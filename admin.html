@@ -37,6 +37,7 @@
     <nav class="header-nav" aria-label="เมนูผู้ดูแล">
       <a href="#queue-panel" class="nav-link nav-link-primary">จัดการคิวเพลง</a>
       <a href="#player-control-panel" class="nav-link">ควบคุม Player</a>
+      <a href="./player.html?room=one" class="nav-link nav-link-primary" target="_blank" rel="noopener">เปิดหน้า Player ↗</a>
       <a href="./library.html?room=one" class="nav-link">คลังเพลง</a>
       <a href="./analytics.html?room=one" class="nav-link">รายงานสถิติ</a>
       <a href="#appearance-panel" class="nav-link">ธีม / กิจกรรม</a>
@@ -65,7 +66,7 @@
       </section>
 
       <section class="panel player-remote-panel" id="player-control-panel">
-        <div class="section-head"><div><p class="eyebrow" style="margin:0 0 4px;color:#2a7db9;font-size:11px;font-weight:850;letter-spacing:1px">REMOTE PLAYER CONTROL</p><h2 style="margin:0">ควบคุมเครื่องเล่น</h2><p class="muted" style="margin:4px 0 0">สั่งงาน Player ที่เชื่อมต่ออยู่ในห้องนี้จากระยะไกล</p></div><span class="tag" id="remote-player-status">รอข้อมูล Player</span></div>
+        <div class="section-head"><div><p class="eyebrow" style="margin:0 0 4px;color:#2a7db9;font-size:11px;font-weight:850;letter-spacing:1px">REMOTE PLAYER CONTROL</p><h2 style="margin:0">ควบคุมเครื่องเล่น</h2><p class="muted" style="margin:4px 0 0">สั่งงาน Player ที่เชื่อมต่ออยู่ในห้องนี้จากระยะไกล</p></div><div class="actions" style="margin:0;align-items:center"><span class="tag" id="remote-player-status">รอข้อมูล Player</span><a href="./player.html?room=one" target="_blank" rel="noopener" class="nav-link nav-link-primary" style="text-decoration:none">เปิดหน้า Player ↗</a></div></div>
         <div class="remote-actions" id="remote-player-actions">
           <button type="button" data-player-command="PLAY">▶ เล่น / เล่นต่อ</button>
           <button type="button" class="secondary" data-player-command="PAUSE">Ⅱ พักเพลง</button>
